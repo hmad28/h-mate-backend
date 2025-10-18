@@ -333,8 +333,8 @@ app.use((req, res) => {
 });
 
 // === START SERVER ===
-app.listen(PORT, () => {
-  console.log(`🚀 Server KarirKu berjalan di http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server KarirKu berjalan di port ${PORT}`);
   console.log(`📚 Dokumentasi API:`);
   console.log(`   POST /api/konsultasi - Chat konsultasi karier`);
   console.log(`   POST /api/generate-questions - Generate soal tes`);
