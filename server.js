@@ -7,10 +7,26 @@ import "dotenv/config";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Validasi GEMINI_API_KEY
+if (!process.env.GEMINI_API_KEY) {
+  console.error("❌ ERROR: GEMINI_API_KEY tidak ditemukan!");
+  console.error("Set environment variable GEMINI_API_KEY di Railway");
+  process.exit(1); // Stop server kalau API key ga ada
+}
+
+console.log("✅ GEMINI_API_KEY terdeteksi");
+
 // Inisialisasi Gemini AI
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
+let ai;
+try {
+  ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY,
+  });
+  console.log("✅ GoogleGenAI initialized successfully");
+} catch (error) {
+  console.error("❌ ERROR initializing GoogleGenAI:", error);
+  process.exit(1);
+}
 
 // === MIDDLEWARE ===
 app.use(
