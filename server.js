@@ -111,7 +111,7 @@ app.post("/api/konsultasi", async (req, res) => {
 
   try {
     const systemInstruction = `
-Kamu adalah KarirKu AI Assistant, seorang konselor karier profesional untuk generasi muda Indonesia.
+Kamu adalah H-Mate AI Assistant, seorang konselor karier profesional untuk generasi muda Indonesia.
 
 TUGAS UTAMA:
 - Berikan saran karier yang praktis, realistis, dan relevan dengan kondisi Indonesia
