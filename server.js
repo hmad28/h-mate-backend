@@ -720,7 +720,7 @@ Jawab dalam Bahasa Indonesia yang natural.
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
-    message: "KarirKu API is running",
+    message: "H-Mate API is running",
     timestamp: new Date().toISOString(),
   });
 });
@@ -736,7 +736,7 @@ app.use((req, res) => {
 
 // === START SERVER ===
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server KarirKu berjalan di port ${PORT}`);
+  console.log(`🚀 Server H-Mate berjalan di port ${PORT}`);
   console.log(`📚 Dokumentasi API:`);
   console.log(`   POST /api/konsultasi - Chat konsultasi karier`);
   console.log(`   POST /api/generate-questions - Generate soal tes`);
