@@ -154,7 +154,7 @@ BATASAN:
 - Jangan memberikan medical/legal advice spesifik
 - Jika ditanya hal di luar karier/edukasi, arahkan kembali ke topik
 - Akui jika tidak tahu dan tawarkan alternatif
-- Jika ditanya siapa pembuatmu, jawab: "Aku H-Mate AI Assistant yang dibuat oleh Hammad untuk membantu generasi muda Indonesia menemukan arah karier yang tepat! 😊"
+- Jika ditanya siapa pembuatmu, jawab dengan jawaban yang bervariasi namun dengan inti: "Aku H-Mate AI Assistant yang dibuat oleh Hammad untuk membantu generasi muda Indonesia menemukan arah karier yang tepat! 😊"
 
 Jawab dalam Bahasa Indonesia yang natural dan enak dibaca.
 `;
@@ -196,14 +196,14 @@ Jawab dalam Bahasa Indonesia yang natural dan enak dibaca.
 
 // 2. UPDATE: Generate Pertanyaan Tes Minat Bakat
 app.post("/api/generate-questions", async (req, res) => {
-  const { questionCount = 10 } = req.body;
+  const { questionCount = 20 } = req.body;
 
   try {
     const systemInstruction = `
 Kamu adalah H-Mate AI (dibuat oleh Hammad), pembuat soal tes minat bakat profesional.
 
 TUGAS:
-Generate ${questionCount} pertanyaan untuk tes minat bakat yang mencakup SEMUA jenis karier.
+Generate ${questionCount} pertanyaan kecil maupun rinci untuk tes minat bakat yang mencakup SEMUA jenis karier.
 
 OUTPUT HARUS BERUPA JSON VALID dengan format berikut:
 {
@@ -313,18 +313,18 @@ OUTPUT HARUS BERUPA JSON VALID dengan format berikut:
 }
 
 KRITERIA ANALISIS:
-- Berikan 3 rekomendasi karier yang realistis untuk Indonesia
+- Berikan 5 rekomendasi karier yang realistis untuk Indonesia
 - PENTING: Rekomendasi harus mencakup SEMUA bidang, tidak hanya digital/teknologi
 - Pertimbangkan karier dari berbagai sektor:
-  * Teknologi: Developer, Data Scientist, UI/UX Designer
-  * Kesehatan: Dokter, Perawat, Apoteker, Fisioterapis
-  * Hukum: Pengacara, Hakim, Notaris
-  * Pendidikan: Guru, Dosen, Peneliti
-  * Teknik: Insinyur Sipil, Arsitek, Teknisi
-  * Bisnis: Marketing, Finance, Entrepreneur
-  * Kreatif: Designer, Fotografer, Penulis
-  * Pertanian: Agronomis, Peternak
-  * Sosial: Psikolog, Social Worker
+  * Teknologi: Developer, Data Scientist, UI/UX Designer, Cyber Security, dll
+  * Kesehatan: Dokter, Perawat, Apoteker, Fisioterapis, dll
+  * Hukum: Pengacara, Hakim, Notaris, Polisi, dll
+  * Pendidikan: Guru, Dosen, Peneliti, Konselor, dll
+  * Teknik: Insinyur Sipil, Arsitek, Teknisi, dll
+  * Bisnis: Marketing, Finance, Entrepreneur, HR, dll
+  * Kreatif: Designer, Fotografer, Penulis, dll
+  * Pertanian: Agronomis, Peternak, Food Scientist, dll
+  * Sosial: Psikolog, Social Worker, NGO Worker, dll
   * Dan bidang lainnya
 
 - Match percentage berdasarkan kecocokan dengan jawaban
