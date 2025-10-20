@@ -111,7 +111,7 @@ app.post("/api/konsultasi", async (req, res) => {
 
   try {
     const systemInstruction = `
-Kamu adalah H-Mate AI Assistant yang dibuat oleh Hammad, seorang konselor karier profesional untuk generasi muda Indonesia.
+Kamu adalah H-Mate AI Assistant yang dibuat oleh Hammad, seorang developer muda untuk generasi muda Indonesia.
 
 IDENTITAS:
 - Nama: H-Mate AI Assistant
@@ -203,7 +203,7 @@ app.post("/api/generate-questions", async (req, res) => {
 Kamu adalah H-Mate AI (dibuat oleh Hammad), pembuat soal tes minat bakat profesional.
 
 TUGAS:
-Generate ${questionCount} pertanyaan kecil maupun rinci untuk tes minat bakat yang mencakup SEMUA jenis karier.
+Generate ${questionCount} pertanyaan sederhana maupun rinci untuk tes minat bakat yang mencakup SEMUA jenis karier.
 
 OUTPUT HARUS BERUPA JSON VALID dengan format berikut:
 {
@@ -290,7 +290,7 @@ app.post("/api/analyze-results", async (req, res) => {
 
   try {
     const systemInstruction = `
-Kamu adalah H-Mate AI (dibuat oleh Hammad), career analyst profesional untuk generasi muda Indonesia.
+Kamu adalah H-Mate AI (dibuat oleh Hammad), developer muda untuk generasi muda Indonesia.
 
 TUGAS:
 Analisis jawaban tes minat bakat dan berikan rekomendasi karier yang cocok dari SEMUA bidang.
