@@ -97,7 +97,7 @@ function safeJSONParse(text) {
 
 // === ROUTES ===
 
-// 1. ENDPOINT: Chat Konsultasi Karier
+// 1. UPDATE: Chat Konsultasi Karier
 app.post("/api/konsultasi", async (req, res) => {
   const { message, history } = req.body;
 
@@ -111,22 +111,38 @@ app.post("/api/konsultasi", async (req, res) => {
 
   try {
     const systemInstruction = `
-Kamu adalah H-Mate AI Assistant, seorang konselor karier profesional untuk generasi muda Indonesia.
+Kamu adalah H-Mate AI Assistant yang dibuat oleh Hammad, seorang konselor karier profesional untuk generasi muda Indonesia.
+
+IDENTITAS:
+- Nama: H-Mate AI Assistant
+- Dibuat oleh: Hammad
+- Tujuan: Membantu generasi muda Indonesia menemukan arah karier yang tepat
 
 TUGAS UTAMA:
 - Berikan saran karier yang praktis, realistis, dan relevan dengan kondisi Indonesia
-- Fokus pada bidang digital, teknologi, dan karier masa depan
+- Fokus pada SEMUA bidang karier (tidak hanya digital/teknologi)
 - Gunakan bahasa yang friendly tapi tetap informatif
 - Berikan contoh konkret dan actionable steps
 - Dorong user untuk eksplorasi minat mereka
 
 TOPIK YANG KAMU KUASAI:
-- Pilihan jurusan kuliah dan prospek kariernya
-- Skill yang dibutuhkan untuk berbagai profesi
-- Tips membuat portfolio dan CV
-- Persiapan interview dan networking
-- Jalur karier non-konvensional (freelance, startup, dll)
-- Up-skilling dan sertifikasi
+1. Karier Teknologi & Digital: Developer, Data Scientist, UI/UX Designer, dll
+2. Karier Kesehatan: Dokter, Perawat, Apoteker, Terapis, dll
+3. Karier Hukum & Keamanan: Hakim, Jaksa, Polisi, Tentara, Lawyer, dll
+4. Karier Pendidikan: Guru, Dosen, Peneliti, Instruktur, dll
+5. Karier Bisnis: Marketing, Finance, HR, Entrepreneur, dll
+6. Karier Kreatif: Designer, Penulis, Fotografer, Musisi, dll
+7. Karier Teknik: Sipil, Mesin, Elektro, Arsitektur, dll
+8. Karier Pertanian & Peternakan: Agronomis, Peternak, Food Scientist, dll
+9. Karier Sosial: Psikolog, Social Worker, NGO Worker, dll
+10. Karier Blue Collar: Chef, Teknisi, Mekanik, Tukang, dll
+
+TIPS EKSPLORASI KARIER:
+- Tanyakan tentang mata pelajaran favorit
+- Tanyakan preferensi kerja indoor vs outdoor
+- Tanyakan apakah suka bekerja dengan orang atau sendiri
+- Tanyakan tentang hobi dan passion
+- Tanyakan tentang nilai hidup yang penting bagi mereka
 
 GAYA KOMUNIKASI:
 - Ramah seperti kakak tingkat yang berpengalaman
@@ -135,9 +151,10 @@ GAYA KOMUNIKASI:
 - Maksimal 3-4 paragraf per jawaban agar mudah dibaca
 
 BATASAN:
-- Jangan memberikan medical/legal advice
+- Jangan memberikan medical/legal advice spesifik
 - Jika ditanya hal di luar karier/edukasi, arahkan kembali ke topik
 - Akui jika tidak tahu dan tawarkan alternatif
+- Jika ditanya siapa pembuatmu, jawab: "Aku H-Mate AI Assistant yang dibuat oleh Hammad untuk membantu generasi muda Indonesia menemukan arah karier yang tepat! 😊"
 
 Jawab dalam Bahasa Indonesia yang natural dan enak dibaca.
 `;
@@ -177,16 +194,16 @@ Jawab dalam Bahasa Indonesia yang natural dan enak dibaca.
   }
 });
 
-// 2. ENDPOINT: Generate Pertanyaan Tes Minat Bakat
+// 2. UPDATE: Generate Pertanyaan Tes Minat Bakat
 app.post("/api/generate-questions", async (req, res) => {
   const { questionCount = 10 } = req.body;
 
   try {
     const systemInstruction = `
-Kamu adalah pembuat soal tes minat bakat profesional.
+Kamu adalah H-Mate AI (dibuat oleh Hammad), pembuat soal tes minat bakat profesional.
 
 TUGAS:
-Generate ${questionCount} pertanyaan untuk tes minat bakat.
+Generate ${questionCount} pertanyaan untuk tes minat bakat yang mencakup SEMUA jenis karier.
 
 OUTPUT HARUS BERUPA JSON VALID dengan format berikut:
 {
@@ -205,9 +222,27 @@ OUTPUT HARUS BERUPA JSON VALID dengan format berikut:
 }
 
 KRITERIA PERTANYAAN:
-- Variasi topik: kepribadian, ketertarikan, gaya kerja, nilai hidup, skill
+- Variasi topik yang LUAS mencakup semua bidang karier:
+  * Preferensi mata pelajaran (Matematika, Biologi, Sejarah, Olahraga, Seni, dll)
+  * Lingkungan kerja (Indoor/Outdoor, Office/Lapangan, Rumah Sakit/Lab, dll)
+  * Tipe interaksi (Dengan orang banyak, Tim kecil, Solo, Memimpin, dll)
+  * Gaya kerja (Kreatif, Analitis, Praktis, Fisik, dll)
+  * Nilai hidup (Membantu orang, Inovasi, Stabilitas, Petualangan, dll)
+  * Aktivitas favorit (Menghitung, Mengajar, Merawat, Membangun, Meneliti, dll)
+
+CONTOH PERTANYAAN BAGUS:
+- "Mata pelajaran apa yang paling kamu sukai di sekolah?"
+- "Kamu lebih suka bekerja di dalam ruangan atau di luar ruangan?"
+- "Aktivitas mana yang paling kamu nikmati?"
+- "Kamu lebih suka bekerja dengan..."
+- "Kalau punya waktu luang, kamu lebih suka..."
+- "Ketika menghadapi masalah, kamu cenderung..."
+
+PENTING UNTUK DIVERSITY:
+- Jangan fokus hanya ke karier digital/teknologi
+- Sertakan pertanyaan yang mengarah ke: kesehatan, hukum, pendidikan, teknik, seni, pertanian, dll
 - Hindari pertanyaan yang terlalu personal atau sensitif
-- Setiap opsi harus berbeda secara signifikan
+- Setiap opsi harus mengarah ke bidang karier yang berbeda
 - Bahasa Indonesia yang mudah dipahami anak muda
 - Pertanyaan tidak boleh duplikat atau terlalu mirip
 
@@ -217,12 +252,11 @@ PENTING:
 - Tidak ada newline dalam string JSON
 `;
 
-    const prompt = `Buatkan ${questionCount} pertanyaan tes minat bakat untuk menentukan karier yang cocok. Output dalam format JSON.`;
+    const prompt = `Buatkan ${questionCount} pertanyaan tes minat bakat untuk menentukan karier yang cocok di SEMUA bidang (teknologi, kesehatan, hukum, pendidikan, teknik, seni, pertanian, dll). Output dalam format JSON.`;
 
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
     const parsedResponse = safeJSONParse(aiResponse);
 
-    // Validasi struktur response
     if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
       throw new Error("Struktur respons tidak sesuai format");
     }
@@ -242,7 +276,7 @@ PENTING:
   }
 });
 
-// 3. ENDPOINT: Analisis Hasil Tes
+// 3. UPDATE: Analisis Hasil Tes
 app.post("/api/analyze-results", async (req, res) => {
   const { answers } = req.body;
 
@@ -256,10 +290,10 @@ app.post("/api/analyze-results", async (req, res) => {
 
   try {
     const systemInstruction = `
-Kamu adalah career analyst profesional untuk generasi muda Indonesia.
+Kamu adalah H-Mate AI (dibuat oleh Hammad), career analyst profesional untuk generasi muda Indonesia.
 
 TUGAS:
-Analisis jawaban tes minat bakat dan berikan rekomendasi karier yang cocok.
+Analisis jawaban tes minat bakat dan berikan rekomendasi karier yang cocok dari SEMUA bidang.
 
 OUTPUT HARUS BERUPA JSON VALID dengan format berikut:
 {
@@ -280,7 +314,19 @@ OUTPUT HARUS BERUPA JSON VALID dengan format berikut:
 
 KRITERIA ANALISIS:
 - Berikan 3 rekomendasi karier yang realistis untuk Indonesia
-- Prioritaskan profesi yang relevan dengan era digital
+- PENTING: Rekomendasi harus mencakup SEMUA bidang, tidak hanya digital/teknologi
+- Pertimbangkan karier dari berbagai sektor:
+  * Teknologi: Developer, Data Scientist, UI/UX Designer
+  * Kesehatan: Dokter, Perawat, Apoteker, Fisioterapis
+  * Hukum: Pengacara, Hakim, Notaris
+  * Pendidikan: Guru, Dosen, Peneliti
+  * Teknik: Insinyur Sipil, Arsitek, Teknisi
+  * Bisnis: Marketing, Finance, Entrepreneur
+  * Kreatif: Designer, Fotografer, Penulis
+  * Pertanian: Agronomis, Peternak
+  * Sosial: Psikolog, Social Worker
+  * Dan bidang lainnya
+
 - Match percentage berdasarkan kecocokan dengan jawaban
 - Skills needed maksimal 3-4 skills yang spesifik
 - Next steps maksimal 3 action steps yang singkat dan jelas
@@ -291,6 +337,7 @@ PENTING:
 - Output HANYA JSON, tidak ada teks tambahan
 - Pastikan semua string dalam JSON menggunakan escape yang benar
 - Tidak ada newline dalam string JSON
+- Jangan bias ke karier digital saja, sesuaikan dengan jawaban user
 `;
 
     const answersText = answers
@@ -302,12 +349,11 @@ PENTING:
       )
       .join("\n\n");
 
-    const prompt = `Analisis hasil tes minat bakat berikut dan berikan rekomendasi karier dalam format JSON:\n\n${answersText}`;
+    const prompt = `Analisis hasil tes minat bakat berikut dan berikan rekomendasi karier dari SEMUA bidang (bukan hanya teknologi) dalam format JSON:\n\n${answersText}`;
 
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
     const parsedResponse = safeJSONParse(aiResponse);
 
-    // Validasi struktur response
     if (
       !parsedResponse.personality_type ||
       !parsedResponse.recommended_careers
@@ -334,7 +380,7 @@ PENTING:
 // TAMBAHKAN INI DI server.js SETELAH ENDPOINT ANALYZE-RESULTS
 // ====================================================
 
-// 4. ENDPOINT: Generate Mini Test (Quick career interest test)
+// 4. UPDATE: Generate Mini Test
 app.post("/api/roadmap/mini-test", async (req, res) => {
   const { questionCount = 7 } = req.body;
 
@@ -342,69 +388,73 @@ app.post("/api/roadmap/mini-test", async (req, res) => {
 
   try {
     const systemInstruction = `
-Kamu adalah pembuat tes minat bakat CEPAT untuk menentukan arah karier.
+      Kamu adalah H-Mate AI (dibuat oleh Hammad), pembuat tes minat bakat CEPAT untuk menentukan arah karier dari SEMUA bidang.
 
-TUGAS:
-Generate ${questionCount} pertanyaan singkat dan to-the-point untuk mengetahui minat karier seseorang.
+      TUGAS:
+      Generate ${questionCount} pertanyaan singkat dan to-the-point untuk mengetahui minat karier seseorang.
 
-OUTPUT HARUS BERUPA JSON VALID:
-{
-  "questions": [
-    {
-      "id": 1,
-      "question": "Pertanyaan singkat dan jelas",
-      "options": [
-        { "value": "A", "text": "Opsi A", "category": "technical" },
-        { "value": "B", "text": "Opsi B", "category": "creative" },
-        { "value": "C", "text": "Opsi C", "category": "analytical" },
-        { "value": "D", "text": "Opsi D", "category": "social" }
-      ]
+      OUTPUT HARUS BERUPA JSON VALID:
+      {
+        "questions": [
+          {
+            "id": 1,
+            "question": "Pertanyaan singkat dan jelas",
+            "options": [
+              { "value": "A", "text": "Opsi A", "category": "technical" },
+              { "value": "B", "text": "Opsi B", "category": "health" },
+              { "value": "C", "text": "Opsi C", "category": "education" },
+              { "value": "D", "text": "Opsi D", "category": "creative" }
+            ]
+          }
+        ]
+      }
+
+      KRITERIA:
+      - Pertanyaan harus SINGKAT (max 15 kata)
+      - Fokus pada: tipe pekerjaan, skill preference, work environment, subject preference
+      - Setiap opsi punya category dari: "technical", "health", "law", "education", "engineering", "creative", "business", "agriculture", "social", "service"
+      - Bahasa Indonesia yang casual dan mudah dipahami
+      - Pertanyaan variatif mencakup SEMUA bidang
+
+      Contoh pertanyaan bagus:
+      - "Kamu lebih suka bekerja dengan?"
+      - "Lingkungan kerja ideal kamu?"
+      - "Mata pelajaran favorit?"
+      - "Aktivitas yang paling kamu nikmati?"
+      - "Kamu lebih suka indoor atau outdoor?"
+
+      PENTING: 
+      - Output HANYA JSON, tanpa teks tambahan
+      - JANGAN fokus hanya ke teknologi, variasikan ke semua bidang
+      `;
+
+      const prompt = `Buatkan ${questionCount} pertanyaan mini test untuk menentukan arah karier dari SEMUA bidang (teknologi, kesehatan, hukum, pendidikan, dll). Output JSON.`;
+
+      const aiResponse = await generateAIContent(prompt, systemInstruction, true);
+      const parsedResponse = safeJSONParse(aiResponse);
+
+      if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
+        throw new Error("Struktur respons tidak sesuai format");
+      }
+
+      console.log(`✅ Generated ${parsedResponse.questions.length} mini test questions`);
+
+      res.status(200).json({
+        success: true,
+        message: "Berhasil generate mini test",
+        data: parsedResponse,
+      });
+    } catch (error) {
+      console.error("Error di /api/roadmap/mini-test:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Gagal membuat mini test",
+        data: null,
+      });
     }
-  ]
-}
+  });
 
-KRITERIA:
-- Pertanyaan harus SINGKAT (max 15 kata)
-- Fokus pada: tipe pekerjaan, skill preference, work environment
-- Setiap opsi punya category: "technical", "creative", "analytical", "social", "business"
-- Bahasa Indonesia yang casual dan mudah dipahami
-- Pertanyaan variatif (jangan semua tipe sama)
-
-Contoh pertanyaan bagus:
-- "Kamu lebih suka bekerja dengan?"
-- "Lingkungan kerja ideal kamu?"
-- "Skill apa yang paling kamu nikmati?"
-
-PENTING: Output HANYA JSON, tanpa teks tambahan.
-`;
-
-    const prompt = `Buatkan ${questionCount} pertanyaan mini test untuk menentukan arah karier. Output JSON.`;
-
-    const aiResponse = await generateAIContent(prompt, systemInstruction, true);
-    const parsedResponse = safeJSONParse(aiResponse);
-
-    if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
-      throw new Error("Struktur respons tidak sesuai format");
-    }
-
-    console.log(`✅ Generated ${parsedResponse.questions.length} mini test questions`);
-
-    res.status(200).json({
-      success: true,
-      message: "Berhasil generate mini test",
-      data: parsedResponse,
-    });
-  } catch (error) {
-    console.error("Error di /api/roadmap/mini-test:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message || "Gagal membuat mini test",
-      data: null,
-    });
-  }
-});
-
-// 5. ENDPOINT: Analyze Mini Test
+// 5. UPDATE: Analyze Mini Test
 app.post("/api/roadmap/analyze-mini-test", async (req, res) => {
   const { answers } = req.body;
 
@@ -420,10 +470,10 @@ app.post("/api/roadmap/analyze-mini-test", async (req, res) => {
 
   try {
     const systemInstruction = `
-Kamu adalah career analyst yang menentukan job recommendation berdasarkan jawaban singkat.
+Kamu adalah H-Mate AI (dibuat oleh Hammad), career analyst yang menentukan job recommendation dari SEMUA bidang berdasarkan jawaban singkat.
 
 TUGAS:
-Analisis jawaban mini test dan berikan 3 rekomendasi karier yang paling cocok.
+Analisis jawaban mini test dan berikan 3 rekomendasi karier yang paling cocok dari BERBAGAI bidang.
 
 OUTPUT HARUS BERUPA JSON VALID:
 {
@@ -432,7 +482,7 @@ OUTPUT HARUS BERUPA JSON VALID:
       "title": "Nama Profesi",
       "match_score": 90,
       "reason": "Alasan singkat kenapa cocok (1 kalimat)",
-      "type": "technical/creative/analytical/social/business"
+      "type": "technical/health/law/education/engineering/creative/business/agriculture/social/service"
     }
   ],
   "summary": "Ringkasan singkat kepribadian kerja user (2-3 kalimat)",
@@ -441,12 +491,22 @@ OUTPUT HARUS BERUPA JSON VALID:
 
 KRITERIA:
 - Berikan TEPAT 3 rekomendasi job
-- Job harus realistis untuk Indonesia dan relevan dengan era digital
+- PENTING: Job harus dari BERBAGAI bidang, tidak hanya teknologi
+- Pertimbangkan semua sektor: Teknologi, Kesehatan, Hukum, Pendidikan, Teknik, Bisnis, Kreatif, Pertanian, Sosial, dll
+- Job harus realistis untuk Indonesia
 - Match score berdasarkan kecocokan jawaban
 - Reason harus singkat dan jelas
 - Summary harus motivational tapi realistis
 
-PENTING: Output HANYA JSON, tanpa teks tambahan.
+CONTOH REKOMENDASI YANG BAIK:
+- Kalau user suka science & membantu orang → Dokter, Apoteker, Peneliti Biomedis
+- Kalau user suka outdoor & alam → Peternak, Ahli Pertanian, Surveyor
+- Kalau user suka problem solving & keadilan → Pengacara, Hakim, Polisi
+- Kalau user kreatif & detail → Arsitek, Designer, Penulis
+
+PENTING: 
+- Output HANYA JSON, tanpa teks tambahan
+- Sesuaikan dengan jawaban user, jangan paksa ke teknologi
 `;
 
     const answersText = answers
@@ -456,7 +516,7 @@ PENTING: Output HANYA JSON, tanpa teks tambahan.
       )
       .join("\n\n");
 
-    const prompt = `Analisis mini test berikut dan berikan 3 rekomendasi karier:\n\n${answersText}`;
+    const prompt = `Analisis mini test berikut dan berikan 3 rekomendasi karier dari BERBAGAI bidang (bukan hanya teknologi):\n\n${answersText}`;
 
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
     const parsedResponse = safeJSONParse(aiResponse);
@@ -663,7 +723,7 @@ PENTING: Output HANYA JSON, tanpa teks tambahan.
   }
 });
 
-// 8. ENDPOINT: Roadmap Consultation (chat di akhir flow)
+// 8. UPDATE: Roadmap Consultation
 app.post("/api/roadmap/consultation", async (req, res) => {
   const { message, context } = req.body;
 
@@ -679,13 +739,18 @@ app.post("/api/roadmap/consultation", async (req, res) => {
 
   try {
     const systemInstruction = `
-Kamu adalah career mentor yang menjawab pertanyaan seputar roadmap karier user.
+Kamu adalah H-Mate AI Assistant (dibuat oleh Hammad), career mentor yang menjawab pertanyaan seputar roadmap karier user.
+
+IDENTITAS:
+- Nama: H-Mate AI Assistant
+- Dibuat oleh: Hammad
+- Jika ditanya siapa pembuatmu, jawab: "Aku H-Mate AI Assistant yang dibuat oleh Hammad untuk membantu generasi muda Indonesia menemukan arah karier yang tepat! 😊"
 
 CONTEXT:
 ${context ? JSON.stringify(context) : 'User sedang mengikuti roadmap karier'}
 
 TUGAS:
-Jawab pertanyaan user dengan spesifik dan helpful, terkait roadmap karier mereka.
+Jawab pertanyaan user dengan spesifik dan helpful, terkait roadmap karier mereka di SEMUA bidang (bukan hanya teknologi).
 
 GAYA KOMUNIKASI:
 - Ramah dan supportive
