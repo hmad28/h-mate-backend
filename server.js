@@ -429,31 +429,33 @@ app.post("/api/roadmap/mini-test", async (req, res) => {
       - JANGAN fokus hanya ke teknologi, variasikan ke semua bidang
       `;
 
-      const prompt = `Buatkan ${questionCount} pertanyaan mini test untuk menentukan arah karier dari SEMUA bidang (teknologi, kesehatan, hukum, pendidikan, dll). Output JSON.`;
+    const prompt = `Buatkan ${questionCount} pertanyaan mini test untuk menentukan arah karier dari SEMUA bidang (teknologi, kesehatan, hukum, pendidikan, dll). Output JSON.`;
 
-      const aiResponse = await generateAIContent(prompt, systemInstruction, true);
-      const parsedResponse = safeJSONParse(aiResponse);
+    const aiResponse = await generateAIContent(prompt, systemInstruction, true);
+    const parsedResponse = safeJSONParse(aiResponse);
 
-      if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
-        throw new Error("Struktur respons tidak sesuai format");
-      }
-
-      console.log(`✅ Generated ${parsedResponse.questions.length} mini test questions`);
-
-      res.status(200).json({
-        success: true,
-        message: "Berhasil generate mini test",
-        data: parsedResponse,
-      });
-    } catch (error) {
-      console.error("Error di /api/roadmap/mini-test:", error);
-      res.status(500).json({
-        success: false,
-        message: error.message || "Gagal membuat mini test",
-        data: null,
-      });
+    if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
+      throw new Error("Struktur respons tidak sesuai format");
     }
-  });
+
+    console.log(
+      `✅ Generated ${parsedResponse.questions.length} mini test questions`
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Berhasil generate mini test",
+      data: parsedResponse,
+    });
+  } catch (error) {
+    console.error("Error di /api/roadmap/mini-test:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Gagal membuat mini test",
+      data: null,
+    });
+  }
+});
 
 // 5. UPDATE: Analyze Mini Test
 app.post("/api/roadmap/analyze-mini-test", async (req, res) => {
@@ -513,7 +515,9 @@ PENTING:
     const answersText = answers
       .map(
         (answer, index) =>
-          `Q${index + 1}: ${answer.question}\nJawaban: ${answer.selectedOption.text} (category: ${answer.selectedOption.category || 'unknown'})`
+          `Q${index + 1}: ${answer.question}\nJawaban: ${
+            answer.selectedOption.text
+          } (category: ${answer.selectedOption.category || "unknown"})`
       )
       .join("\n\n");
 
@@ -522,11 +526,18 @@ PENTING:
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
     const parsedResponse = safeJSONParse(aiResponse);
 
-    if (!parsedResponse.recommendedJobs || !Array.isArray(parsedResponse.recommendedJobs)) {
+    if (
+      !parsedResponse.recommendedJobs ||
+      !Array.isArray(parsedResponse.recommendedJobs)
+    ) {
       throw new Error("Struktur respons tidak sesuai format");
     }
 
-    console.log(`✅ Recommended: ${parsedResponse.recommendedJobs.map(j => j.title).join(', ')}`);
+    console.log(
+      `✅ Recommended: ${parsedResponse.recommendedJobs
+        .map((j) => j.title)
+        .join(", ")}`
+    );
 
     res.status(200).json({
       success: true,
@@ -565,7 +576,9 @@ TUGAS:
 Buat roadmap karier lengkap untuk mencapai posisi: ${targetRole}
 
 Status user: ${currentStatus}
-Skill yang sudah dimiliki: ${existingSkills.length > 0 ? existingSkills.join(', ') : 'Belum ada'}
+Skill yang sudah dimiliki: ${
+      existingSkills.length > 0 ? existingSkills.join(", ") : "Belum ada"
+    }
 
 OUTPUT HARUS BERUPA JSON VALID:
 {
@@ -614,7 +627,11 @@ KRITERIA:
 PENTING: Output HANYA JSON, tanpa teks tambahan.
 `;
 
-    const prompt = `Buatkan roadmap karier lengkap untuk ${targetRole}. User adalah ${currentStatus}. ${existingSkills.length > 0 ? `Skill yang sudah dimiliki: ${existingSkills.join(', ')}.` : ''} Output JSON.`;
+    const prompt = `Buatkan roadmap karier lengkap untuk ${targetRole}. User adalah ${currentStatus}. ${
+      existingSkills.length > 0
+        ? `Skill yang sudah dimiliki: ${existingSkills.join(", ")}.`
+        : ""
+    } Output JSON.`;
 
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
     const parsedResponse = safeJSONParse(aiResponse);
@@ -652,7 +669,9 @@ app.post("/api/roadmap/next-steps", async (req, res) => {
     });
   }
 
-  console.log(`📍 Getting next steps (completed: ${completedPhases.length} phases)...`);
+  console.log(
+    `📍 Getting next steps (completed: ${completedPhases.length} phases)...`
+  );
 
   try {
     const systemInstruction = `
@@ -702,7 +721,9 @@ PENTING: Output HANYA JSON, tanpa teks tambahan.
       })),
     });
 
-    const prompt = `User sedang mengikuti roadmap berikut:\n${roadmapSummary}\n\nSkill yang sudah dimiliki: ${currentSkills.join(', ') || 'Belum ada'}.\n\nBerikan next steps dan rekomendasi. Output JSON.`;
+    const prompt = `User sedang mengikuti roadmap berikut:\n${roadmapSummary}\n\nSkill yang sudah dimiliki: ${
+      currentSkills.join(", ") || "Belum ada"
+    }.\n\nBerikan next steps dan rekomendasi. Output JSON.`;
 
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
     const parsedResponse = safeJSONParse(aiResponse);
@@ -748,7 +769,7 @@ IDENTITAS:
 - Jika ditanya siapa pembuatmu, jawab: "Aku H-Mate AI Assistant yang dibuat oleh Hammad untuk membantu generasi muda Indonesia menemukan arah karier yang tepat! 😊"
 
 CONTEXT:
-${context ? JSON.stringify(context) : 'User sedang mengikuti roadmap karier'}
+${context ? JSON.stringify(context) : "User sedang mengikuti roadmap karier"}
 
 TUGAS:
 Jawab pertanyaan user dengan spesifik dan helpful, terkait roadmap karier mereka di SEMUA bidang (bukan hanya teknologi).
@@ -762,7 +783,11 @@ GAYA KOMUNIKASI:
 Jawab dalam Bahasa Indonesia yang natural.
 `;
 
-    const aiResponse = await generateAIContent(message, systemInstruction, false);
+    const aiResponse = await generateAIContent(
+      message,
+      systemInstruction,
+      false
+    );
 
     res.status(200).json({
       success: true,
