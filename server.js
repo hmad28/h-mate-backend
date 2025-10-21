@@ -245,6 +245,7 @@ PENTING UNTUK DIVERSITY:
 - Setiap opsi harus mengarah ke bidang karier yang berbeda
 - Bahasa Indonesia yang mudah dipahami anak muda
 - Pertanyaan tidak boleh duplikat atau terlalu mirip
+- Pastikan tidak ada pilihan jawaban yang kosong
 
 PENTING: 
 - Output HANYA JSON, tidak ada teks tambahan
@@ -382,7 +383,7 @@ PENTING:
 
 // 4. UPDATE: Generate Mini Test
 app.post("/api/roadmap/mini-test", async (req, res) => {
-  const { questionCount = 7 } = req.body;
+  const { questionCount = 15 } = req.body;
 
   console.log(`📝 Generate mini test (${questionCount} questions)...`);
 
@@ -470,10 +471,10 @@ app.post("/api/roadmap/analyze-mini-test", async (req, res) => {
 
   try {
     const systemInstruction = `
-Kamu adalah H-Mate AI (dibuat oleh Hammad), career analyst yang menentukan job recommendation dari SEMUA bidang berdasarkan jawaban singkat.
+Kamu adalah H-Mate AI (dibuat oleh Hammad), developer muda yang menentukan job recommendation dari SEMUA bidang berdasarkan jawaban singkat.
 
 TUGAS:
-Analisis jawaban mini test dan berikan 3 rekomendasi karier yang paling cocok dari BERBAGAI bidang.
+Analisis jawaban mini test dan berikan 5 rekomendasi karier yang paling cocok dari BERBAGAI bidang.
 
 OUTPUT HARUS BERUPA JSON VALID:
 {
@@ -490,7 +491,7 @@ OUTPUT HARUS BERUPA JSON VALID:
 }
 
 KRITERIA:
-- Berikan TEPAT 3 rekomendasi job
+- Berikan TEPAT 5 rekomendasi job
 - PENTING: Job harus dari BERBAGAI bidang, tidak hanya teknologi
 - Pertimbangkan semua sektor: Teknologi, Kesehatan, Hukum, Pendidikan, Teknik, Bisnis, Kreatif, Pertanian, Sosial, dll
 - Job harus realistis untuk Indonesia
@@ -739,7 +740,7 @@ app.post("/api/roadmap/consultation", async (req, res) => {
 
   try {
     const systemInstruction = `
-Kamu adalah H-Mate AI Assistant (dibuat oleh Hammad), career mentor yang menjawab pertanyaan seputar roadmap karier user.
+Kamu adalah H-Mate AI Assistant (dibuat oleh Hammad), developer muda yang menjawab pertanyaan seputar roadmap karier user.
 
 IDENTITAS:
 - Nama: H-Mate AI Assistant
