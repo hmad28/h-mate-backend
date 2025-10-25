@@ -194,16 +194,24 @@ Jawab dalam Bahasa Indonesia yang natural dan enak dibaca.
   }
 });
 
-// 2. UPDATE: Generate Pertanyaan Tes Minat Bakat
+// GANTI ENDPOINT /api/generate-questions di backend/server.js DENGAN KODE INI:
 app.post("/api/generate-questions", async (req, res) => {
   const { questionCount = 20 } = req.body;
 
   try {
+    // Generate random seed untuk variasi
+    const randomSeed = Math.floor(Math.random() * 10000);
+    const timestamp = Date.now();
+    
     const systemInstruction = `
 Kamu adalah H-Mate AI (dibuat oleh Hammad), pembuat soal tes minat bakat profesional.
 
+RANDOM SEED: ${randomSeed} | TIMESTAMP: ${timestamp}
+
+PENTING: Gunakan seed dan timestamp di atas untuk membuat pertanyaan yang BERBEDA setiap kali. Jangan pernah generate pertanyaan yang sama!
+
 TUGAS:
-Generate ${questionCount} pertanyaan sederhana maupun rinci untuk tes minat bakat yang mencakup SEMUA jenis karier.
+Generate ${questionCount} pertanyaan UNIK dan BERVARIASI untuk tes minat bakat yang mencakup SEMUA jenis karier.
 
 OUTPUT HARUS BERUPA JSON VALID dengan format berikut:
 {
@@ -212,48 +220,60 @@ OUTPUT HARUS BERUPA JSON VALID dengan format berikut:
       "id": 1,
       "question": "Pertanyaan dalam bahasa Indonesia",
       "options": [
-        { "value": "A", "text": "Opsi A" },
-        { "value": "B", "text": "Opsi B" },
-        { "value": "C", "text": "Opsi C" },
-        { "value": "D", "text": "Opsi D" }
+        { "value": "A", "text": "Opsi A yang lengkap dan jelas" },
+        { "value": "B", "text": "Opsi B yang lengkap dan jelas" },
+        { "value": "C", "text": "Opsi C yang lengkap dan jelas" },
+        { "value": "D", "text": "Opsi D yang lengkap dan jelas" }
       ]
     }
   ]
 }
 
 KRITERIA PERTANYAAN:
+- WAJIB: Setiap opsi HARUS punya text yang LENGKAP dan TIDAK KOSONG
+- WAJIB: Semua 4 opsi (A, B, C, D) HARUS terisi dengan text yang bermakna
 - Variasi topik yang LUAS mencakup semua bidang karier:
-  * Preferensi mata pelajaran (Matematika, Biologi, Sejarah, Olahraga, Seni, dll)
-  * Lingkungan kerja (Indoor/Outdoor, Office/Lapangan, Rumah Sakit/Lab, dll)
-  * Tipe interaksi (Dengan orang banyak, Tim kecil, Solo, Memimpin, dll)
-  * Gaya kerja (Kreatif, Analitis, Praktis, Fisik, dll)
-  * Nilai hidup (Membantu orang, Inovasi, Stabilitas, Petualangan, dll)
-  * Aktivitas favorit (Menghitung, Mengajar, Merawat, Membangun, Meneliti, dll)
+  * Preferensi mata pelajaran (Matematika, Biologi, Sejarah, Olahraga, Seni, Bahasa, dll)
+  * Lingkungan kerja (Indoor/Outdoor, Office/Lapangan, Rumah Sakit/Lab, Studio, dll)
+  * Tipe interaksi (Dengan orang banyak, Tim kecil, Solo, Memimpin, Mengajar, dll)
+  * Gaya kerja (Kreatif, Analitis, Praktis, Fisik, Strategis, Detail-oriented, dll)
+  * Nilai hidup (Membantu orang, Inovasi, Stabilitas, Petualangan, Kreativitas, Keadilan, dll)
+  * Aktivitas favorit (Menghitung, Mengajar, Merawat, Membangun, Meneliti, Menulis, dll)
 
-CONTOH PERTANYAAN BAGUS:
-- "Mata pelajaran apa yang paling kamu sukai di sekolah?"
-- "Kamu lebih suka bekerja di dalam ruangan atau di luar ruangan?"
-- "Aktivitas mana yang paling kamu nikmati?"
-- "Kamu lebih suka bekerja dengan..."
-- "Kalau punya waktu luang, kamu lebih suka..."
-- "Ketika menghadapi masalah, kamu cenderung..."
+CONTOH PERTANYAAN YANG BAIK DAN BERVARIASI:
+- "Apa yang paling kamu nikmati saat mengerjakan proyek kelompok?"
+- "Jika kamu punya waktu luang 2 jam, apa yang paling ingin kamu lakukan?"
+- "Ketika menghadapi masalah rumit, pendekatan mana yang paling cocok denganmu?"
+- "Lingkungan kerja seperti apa yang membuatmu paling produktif?"
+- "Apa yang membuatmu merasa paling bangga dengan pekerjaan?"
+- "Bidang apa yang paling menarik perhatianmu untuk dipelajari lebih dalam?"
+- "Kalau bisa pilih, kamu lebih suka bekerja dengan..."
+- "Aktivitas mana yang paling membuatmu excited dan termotivasi?"
 
 PENTING UNTUK DIVERSITY:
 - Jangan fokus hanya ke karier digital/teknologi
-- Sertakan pertanyaan yang mengarah ke: kesehatan, hukum, pendidikan, teknik, seni, pertanian, dll
+- Sertakan pertanyaan yang mengarah ke: kesehatan, hukum, pendidikan, teknik, seni, pertanian, bisnis, dll
 - Hindari pertanyaan yang terlalu personal atau sensitif
 - Setiap opsi harus mengarah ke bidang karier yang berbeda
 - Bahasa Indonesia yang mudah dipahami anak muda
-- Pertanyaan tidak boleh duplikat atau terlalu mirip
-- Pastikan tidak ada pilihan jawaban yang kosong
+- Pertanyaan HARUS BERBEDA dari batch sebelumnya
+- TIDAK BOLEH ada pertanyaan yang duplikat atau terlalu mirip
+- SEMUA opsi (A, B, C, D) HARUS punya text yang lengkap, TIDAK BOLEH ADA YANG KOSONG
+
+VALIDASI WAJIB:
+1. Setiap pertanyaan punya 4 opsi (A, B, C, D)
+2. Setiap opsi punya "value" dan "text"
+3. Field "text" TIDAK BOLEH kosong atau null
+4. Minimal 10 kata per opsi untuk memastikan lengkap
 
 PENTING: 
 - Output HANYA JSON, tidak ada teks tambahan
 - Pastikan semua string dalam JSON menggunakan escape yang benar
 - Tidak ada newline dalam string JSON
+- WAJIB: Semua opsi harus terisi lengkap!
 `;
 
-    const prompt = `Buatkan ${questionCount} pertanyaan tes minat bakat untuk menentukan karier yang cocok di SEMUA bidang (teknologi, kesehatan, hukum, pendidikan, teknik, seni, pertanian, dll). Output dalam format JSON.`;
+    const prompt = `Buatkan ${questionCount} pertanyaan tes minat bakat yang BERBEDA dan UNIK (seed: ${randomSeed}) untuk menentukan karier yang cocok di SEMUA bidang (teknologi, kesehatan, hukum, pendidikan, teknik, seni, pertanian, dll). Output dalam format JSON. PENTING: Pastikan semua opsi terisi lengkap, tidak ada yang kosong!`;
 
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
     const parsedResponse = safeJSONParse(aiResponse);
@@ -262,10 +282,29 @@ PENTING:
       throw new Error("Struktur respons tidak sesuai format");
     }
 
+    // VALIDASI: Cek apakah ada opsi yang kosong
+    const validQuestions = parsedResponse.questions.filter(q => {
+      if (!q.options || q.options.length !== 4) return false;
+      
+      // Cek setiap opsi punya text yang tidak kosong
+      const allOptionsValid = q.options.every(opt => 
+        opt.text && opt.text.trim().length > 0
+      );
+      
+      return allOptionsValid;
+    });
+
+    console.log(`✅ Generated ${validQuestions.length} valid questions out of ${parsedResponse.questions.length}`);
+
+    // Kalau kurang dari yang diminta, throw error biar retry
+    if (validQuestions.length < questionCount) {
+      console.log(`⚠️ Warning: Only ${validQuestions.length} valid questions, requested ${questionCount}`);
+    }
+
     res.status(200).json({
       success: true,
       message: "Berhasil generate pertanyaan",
-      data: parsedResponse,
+      data: { questions: validQuestions },
     });
   } catch (error) {
     console.error("Error di /api/generate-questions:", error);
