@@ -196,84 +196,119 @@ Jawab dalam Bahasa Indonesia yang natural dan enak dibaca.
 
 // GANTI ENDPOINT /api/generate-questions di backend/server.js DENGAN KODE INI:
 app.post("/api/generate-questions", async (req, res) => {
-  const { questionCount = 20 } = req.body;
+  const { questionCount = 20, userAge } = req.body;
 
   try {
     // Generate random seed untuk variasi
     const randomSeed = Math.floor(Math.random() * 10000);
     const timestamp = Date.now();
     
+    // Determine language level based on age
+    let ageContext = "";
+    let languageLevel = "";
+    
+    if (userAge) {
+      if (userAge <= 15) {
+        ageContext = "User adalah siswa SMP";
+        languageLevel = "Gunakan bahasa yang sangat sederhana, seperti ngobrol dengan teman SMP. Hindari istilah teknis.";
+      } else if (userAge <= 18) {
+        ageContext = "User adalah siswa SMA";
+        languageLevel = "Gunakan bahasa santai seperti ngobrol dengan teman SMA. Kata-kata sehari-hari aja.";
+      } else if (userAge <= 23) {
+        ageContext = "User adalah mahasiswa atau fresh graduate";
+        languageLevel = "Gunakan bahasa casual tapi profesional, seperti ngobrol dengan teman kuliah.";
+      } else {
+        ageContext = "User adalah profesional muda";
+        languageLevel = "Gunakan bahasa yang friendly tapi tetap dewasa.";
+      }
+    } else {
+      // Default: fokus ke remaja SMP-SMA
+      ageContext = "User adalah remaja tingkat SMP-SMA";
+      languageLevel = "Gunakan bahasa yang SANGAT SEDERHANA seperti ngobrol dengan adik kelas. Hindari kata-kata sulit atau istilah teknis. Pakai kata-kata sehari-hari yang umum dipakai anak muda.";
+    }
+    
     const systemInstruction = `
-Kamu adalah H-Mate AI (dibuat oleh Hammad), pembuat soal tes minat bakat profesional.
+Kamu adalah H-Mate AI (dibuat oleh Hammad), pembuat soal tes minat bakat.
 
 RANDOM SEED: ${randomSeed} | TIMESTAMP: ${timestamp}
+CONTEXT: ${ageContext}
 
-PENTING: Gunakan seed dan timestamp di atas untuk membuat pertanyaan yang BERBEDA setiap kali. Jangan pernah generate pertanyaan yang sama!
+${languageLevel}
+
+CONTOH KATA YANG BOLEH DIPAKAI:
+✅ suka, senang, hobi, main, belajar, kerja, coba, bikin, ngobrol, nonton, baca
+✅ teman, keluarga, orang, guru, dosen, tim, sendiri
+✅ mudah, susah, seru, boring, capek, santai, asik, keren
+✅ di rumah, di luar, di kantor, di sekolah, online, offline
+
+CONTOH KATA YANG JANGAN DIPAKAI:
+❌ produktif, efisien, optimal, strategis, visioner, inovatif (terlalu formal)
+❌ mengimplementasikan, mengoptimalkan, memfasilitasi (terlalu teknis)
+❌ preferensi, konvensi, kolaborasi (pakai kata sederhana aja)
 
 TUGAS:
-Generate ${questionCount} pertanyaan UNIK dan BERVARIASI untuk tes minat bakat yang mencakup SEMUA jenis karier.
+Generate ${questionCount} pertanyaan SIMPLE dan MUDAH DIPAHAMI untuk tes minat bakat.
 
-OUTPUT HARUS BERUPA JSON VALID dengan format berikut:
+OUTPUT JSON FORMAT:
 {
   "questions": [
     {
       "id": 1,
-      "question": "Pertanyaan dalam bahasa Indonesia",
+      "question": "Pertanyaan pendek dan jelas (maksimal 15 kata)",
       "options": [
-        { "value": "A", "text": "Opsi A yang lengkap dan jelas" },
-        { "value": "B", "text": "Opsi B yang lengkap dan jelas" },
-        { "value": "C", "text": "Opsi C yang lengkap dan jelas" },
-        { "value": "D", "text": "Opsi D yang lengkap dan jelas" }
+        { "value": "A", "text": "Opsi singkat dan jelas" },
+        { "value": "B", "text": "Opsi singkat dan jelas" },
+        { "value": "C", "text": "Opsi singkat dan jelas" },
+        { "value": "D", "text": "Opsi singkat dan jelas" }
       ]
     }
   ]
 }
 
 KRITERIA PERTANYAAN:
-- WAJIB: Setiap opsi HARUS punya text yang LENGKAP dan TIDAK KOSONG
-- WAJIB: Semua 4 opsi (A, B, C, D) HARUS terisi dengan text yang bermakna
-- Variasi topik yang LUAS mencakup semua bidang karier:
-  * Preferensi mata pelajaran (Matematika, Biologi, Sejarah, Olahraga, Seni, Bahasa, dll)
-  * Lingkungan kerja (Indoor/Outdoor, Office/Lapangan, Rumah Sakit/Lab, Studio, dll)
-  * Tipe interaksi (Dengan orang banyak, Tim kecil, Solo, Memimpin, Mengajar, dll)
-  * Gaya kerja (Kreatif, Analitis, Praktis, Fisik, Strategis, Detail-oriented, dll)
-  * Nilai hidup (Membantu orang, Inovasi, Stabilitas, Petualangan, Kreativitas, Keadilan, dll)
-  * Aktivitas favorit (Menghitung, Mengajar, Merawat, Membangun, Meneliti, Menulis, dll)
+✅ Pertanyaan HARUS pendek (maksimal 15 kata)
+✅ Pakai kata-kata sehari-hari yang umum
+✅ Hindari istilah teknis atau bahasa formal
+✅ Setiap opsi maksimal 8-10 kata
+✅ Semua 4 opsi HARUS terisi lengkap (tidak boleh kosong!)
+✅ Pertanyaan HARUS berbeda setiap kali (pakai seed!)
 
-CONTOH PERTANYAAN YANG BAIK DAN BERVARIASI:
-- "Apa yang paling kamu nikmati saat mengerjakan proyek kelompok?"
-- "Jika kamu punya waktu luang 2 jam, apa yang paling ingin kamu lakukan?"
-- "Ketika menghadapi masalah rumit, pendekatan mana yang paling cocok denganmu?"
-- "Lingkungan kerja seperti apa yang membuatmu paling produktif?"
-- "Apa yang membuatmu merasa paling bangga dengan pekerjaan?"
-- "Bidang apa yang paling menarik perhatianmu untuk dipelajari lebih dalam?"
-- "Kalau bisa pilih, kamu lebih suka bekerja dengan..."
-- "Aktivitas mana yang paling membuatmu excited dan termotivasi?"
+CONTOH PERTANYAAN YANG BAGUS:
+❌ BURUK: "Apa preferensi lingkungan kerja yang optimal untuk produktivitas kamu?"
+✅ BAGUS: "Kamu lebih suka kerja di mana?"
 
-PENTING UNTUK DIVERSITY:
-- Jangan fokus hanya ke karier digital/teknologi
-- Sertakan pertanyaan yang mengarah ke: kesehatan, hukum, pendidikan, teknik, seni, pertanian, bisnis, dll
-- Hindari pertanyaan yang terlalu personal atau sensitif
-- Setiap opsi harus mengarah ke bidang karier yang berbeda
-- Bahasa Indonesia yang mudah dipahami anak muda
-- Pertanyaan HARUS BERBEDA dari batch sebelumnya
-- TIDAK BOLEH ada pertanyaan yang duplikat atau terlalu mirip
-- SEMUA opsi (A, B, C, D) HARUS punya text yang lengkap, TIDAK BOLEH ADA YANG KOSONG
+❌ BURUK: "Ketika berkolaborasi dalam tim, peran apa yang paling sesuai dengan karakteristik kamu?"
+✅ BAGUS: "Kalau kerja bareng teman, kamu biasanya ngapain?"
 
-VALIDASI WAJIB:
-1. Setiap pertanyaan punya 4 opsi (A, B, C, D)
-2. Setiap opsi punya "value" dan "text"
-3. Field "text" TIDAK BOLEH kosong atau null
-4. Minimal 10 kata per opsi untuk memastikan lengkap
+❌ BURUK: "Bidang akademik mana yang paling mengoptimalkan potensi kognitif kamu?"
+✅ BAGUS: "Pelajaran apa yang paling kamu suka?"
 
-PENTING: 
-- Output HANYA JSON, tidak ada teks tambahan
-- Pastikan semua string dalam JSON menggunakan escape yang benar
-- Tidak ada newline dalam string JSON
-- WAJIB: Semua opsi harus terisi lengkap!
+CONTOH OPSI YANG BAGUS:
+❌ BURUK: "Mengoptimalkan efisiensi proses bisnis"
+✅ BAGUS: "Atur dan rapiin cara kerja"
+
+❌ BURUK: "Berinteraksi dengan stakeholder eksternal"
+✅ BAGUS: "Ngobrol sama banyak orang"
+
+TOPIK YANG BISA DITANYA (pakai bahasa simple):
+- Pelajaran favorit
+- Hobi dan aktivitas suka dilakukan
+- Lebih suka kerja sendiri atau bareng teman
+- Suka di dalam ruangan atau di luar
+- Lebih suka mikir atau ngerjain langsung
+- Suka bantu orang atau bikin sesuatu
+- Lebih suka yang kreatif atau yang pasti
+- Suka tantangan atau yang santai
+
+PENTING:
+- Output HANYA JSON
+- Semua opsi WAJIB terisi penuh
+- Pakai bahasa yang SIMPLE dan CASUAL
+- Hindari kata-kata sulit/formal
+- Pertanyaan HARUS beda setiap kali!
 `;
 
-    const prompt = `Buatkan ${questionCount} pertanyaan tes minat bakat yang BERBEDA dan UNIK (seed: ${randomSeed}) untuk menentukan karier yang cocok di SEMUA bidang (teknologi, kesehatan, hukum, pendidikan, teknik, seni, pertanian, dll). Output dalam format JSON. PENTING: Pastikan semua opsi terisi lengkap, tidak ada yang kosong!`;
+    const prompt = `Buatkan ${questionCount} pertanyaan tes minat bakat yang SIMPLE dan MUDAH DIPAHAMI (seed: ${randomSeed}). Target: ${ageContext}. Pakai bahasa sehari-hari yang gampang dimengerti. Output JSON. WAJIB: Semua opsi harus terisi!`;
 
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
     const parsedResponse = safeJSONParse(aiResponse);
@@ -294,9 +329,9 @@ PENTING:
       return allOptionsValid;
     });
 
-    console.log(`✅ Generated ${validQuestions.length} valid questions out of ${parsedResponse.questions.length}`);
+    console.log(`✅ Generated ${validQuestions.length} valid questions (Age: ${userAge || 'default SMP-SMA'})`);
 
-    // Kalau kurang dari yang diminta, throw error biar retry
+    // Kalau kurang dari yang diminta, log warning
     if (validQuestions.length < questionCount) {
       console.log(`⚠️ Warning: Only ${validQuestions.length} valid questions, requested ${questionCount}`);
     }
