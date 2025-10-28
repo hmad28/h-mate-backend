@@ -64,85 +64,115 @@ async function generateAIContent(prompt, systemInstruction, isJSON = false) {
   }
 }
 
-function safeJSONParse(text) {
-  try {
-    // 1. Bersihkan markdown code blocks (semua variasi)
-    let cleaned = text
-      .replace(/^```json\s*/gm, "")
-      .replace(/^```\s*/gm, "")
-      .replace(/```$/gm, "")
-      .trim();
+// // STRATEGI PARSING YANG LEBIH ROBUST
+// function safeJSONParse(text) {
+//   // Log untuk debugging
+//   console.log("🔍 Parsing AI response...");
+//   console.log("Length:", text.length);
+  
+//   try {
+//     // STEP 1: Bersihkan markdown code blocks
+//     let cleaned = text
+//       .replace(/```json\n?/gi, "")
+//       .replace(/```\n?/g, "")
+//       .trim();
 
-    // 2. Hapus teks sebelum JSON (cari kurung kurawal pertama)
-    const firstBrace = cleaned.indexOf("{");
-    if (firstBrace > 0) {
-      cleaned = cleaned.substring(firstBrace);
-    }
+//     // STEP 2: Coba parse langsung
+//     const parsed = JSON.parse(cleaned);
+//     console.log("✅ Direct parse successful");
+//     return parsed;
+    
+//   } catch (error) {
+//     console.warn("⚠️ Direct parse failed, trying fallbacks...");
+    
+//     // FALLBACK 1: Ekstrak JSON dari text
+//     try {
+//       // Cari object JSON terbesar
+//       const jsonMatch = text.match(/\{[\s\S]*\}/);
+//       if (jsonMatch) {
+//         const parsed = JSON.parse(jsonMatch[0]);
+//         console.log("✅ Fallback 1 successful (regex extraction)");
+//         return parsed;
+//       }
+//     } catch (e) {
+//       console.warn("⚠️ Fallback 1 failed");
+//     }
 
-    // 3. Hapus teks setelah JSON (cari kurung kurawal terakhir)
-    const lastBrace = cleaned.lastIndexOf("}");
-    if (lastBrace !== -1 && lastBrace < cleaned.length - 1) {
-      cleaned = cleaned.substring(0, lastBrace + 1);
-    }
+//     // FALLBACK 2: Cari array questions di dalam text
+//     try {
+//       const questionsMatch = text.match(/"questions"\s*:\s*\[[\s\S]*\]/);
+//       if (questionsMatch) {
+//         const questionsStr = questionsMatch[0];
+//         const parsed = JSON.parse(`{${questionsStr}}`);
+//         console.log("✅ Fallback 2 successful (questions extraction)");
+//         return parsed;
+//       }
+//     } catch (e) {
+//       console.warn("⚠️ Fallback 2 failed");
+//     }
 
-    // 4. Parse JSON
-    const parsed = JSON.parse(cleaned);
+//     // FALLBACK 3: Log dan throw error
+//     console.error("❌ All parsing strategies failed");
+//     console.log("Preview (first 500 chars):", text.substring(0, 500));
+//     console.log("Preview (last 200 chars):", text.substring(text.length - 200));
+    
+//     throw new Error("Format respons AI tidak valid. Silakan coba lagi.");
+//   }
+// }
 
-    // 5. Validasi struktur
-    if (!parsed.questions || !Array.isArray(parsed.questions)) {
-      throw new Error("Missing or invalid 'questions' array");
-    }
+// // VALIDASI YANG LEBIH KETAT
+// function validateQuestions(questions) {
+//   if (!Array.isArray(questions)) {
+//     console.error("❌ Questions is not an array:", typeof questions);
+//     return [];
+//   }
 
-    return parsed;
-  } catch (error) {
-    console.error("❌ JSON Parse Error:", error.message);
-    console.log("📄 Raw response length:", text.length);
-    console.log("📄 First 500 chars:", text.substring(0, 500));
-    console.log(
-      "📄 Last 500 chars:",
-      text.substring(Math.max(0, text.length - 500))
-    );
+//   const validated = questions.filter((q, index) => {
+//     // Validasi struktur dasar
+//     if (!q.question || typeof q.question !== 'string') {
+//       console.warn(`⚠️ Q${index + 1}: Invalid question text`);
+//       return false;
+//     }
 
-    // Fallback: Coba ekstrak JSON dengan regex lebih agresif
-    try {
-      // Cari pattern JSON object yang lengkap
-      const jsonPattern = /\{[\s\S]*"questions"[\s\S]*\]/;
-      const match = text.match(jsonPattern);
+//     if (!q.options || !Array.isArray(q.options)) {
+//       console.warn(`⚠️ Q${index + 1}: Invalid options array`);
+//       return false;
+//     }
 
-      if (match) {
-        // Cari penutup object terdekat
-        let jsonStr = match[0];
-        let depth = 0;
-        let endIndex = -1;
+//     if (q.options.length !== 4) {
+//       console.warn(`⚠️ Q${index + 1}: Expected 4 options, got ${q.options.length}`);
+//       return false;
+//     }
 
-        for (let i = 0; i < jsonStr.length; i++) {
-          if (jsonStr[i] === "{") depth++;
-          if (jsonStr[i] === "}") {
-            depth--;
-            if (depth === 0) {
-              endIndex = i;
-              break;
-            }
-          }
-        }
+//     // Validasi setiap opsi
+//     const validOptions = q.options.every(opt => {
+//       const isValid = opt.text && 
+//                      opt.text.trim().length > 0 && 
+//                      opt.value &&
+//                      typeof opt.text === 'string' &&
+//                      typeof opt.value === 'string';
+      
+//       if (!isValid) {
+//         console.warn(`⚠️ Q${index + 1}: Invalid option:`, opt);
+//       }
+      
+//       return isValid;
+//     });
 
-        if (endIndex !== -1) {
-          jsonStr = jsonStr.substring(0, endIndex + 1);
-          const parsed = JSON.parse(jsonStr);
+//     if (!validOptions) {
+//       console.warn(`⚠️ Q${index + 1}: Has invalid options`);
+//       return false;
+//     }
 
-          if (parsed.questions && Array.isArray(parsed.questions)) {
-            console.log("✅ Recovered JSON with fallback parser");
-            return parsed;
-          }
-        }
-      }
-    } catch (fallbackError) {
-      console.error("❌ Fallback parse failed:", fallbackError.message);
-    }
+//     return true;
+//   });
 
-    throw new Error("Format respons AI tidak valid. Silakan coba lagi.");
-  }
-}
+//   console.log(`✅ Validated ${validated.length}/${questions.length} questions`);
+//   return validated;
+// }
+
+// EXPORT FUNCTIONS
+module.exports = { safeJSONParse, validateQuestions };
 
 // === ROUTES ===
 
@@ -248,7 +278,7 @@ Jawab dalam Bahasa Indonesia yang natural dan enak dibaca.
 // Copy SEMUA kode ini ke backend/server.js
 // ============================================
 
-// ENDPOINT 1: GENERATE QUESTIONS
+// ENDPOINT DENGAN ERROR HANDLING YANG LEBIH BAIK
 app.post("/api/generate-questions", async (req, res) => {
   const { questionCount = 30, userAge } = req.body;
 
@@ -258,10 +288,10 @@ app.post("/api/generate-questions", async (req, res) => {
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substr(2, 9);
     const uniqueId = `${randomSeed}-${timestamp}-${randomStr}`;
-
+    
     // Determine age group
     let ageGroup, ageContext, languageLevel, exampleQuestions;
-
+    
     if (!userAge || userAge <= 15) {
       ageGroup = "SMP";
       ageContext = "User adalah siswa SMP (12-15 tahun)";
@@ -269,7 +299,7 @@ app.post("/api/generate-questions", async (req, res) => {
 - Pakai kata sehari-hari: suka, senang, main, belajar, kerja
 - HINDARI: produktif, efisien, optimal, preferensi
 - Pertanyaan MAX 15 kata, opsi MAX 10 kata`;
-
+      
       exampleQuestions = `
 CONTOH BAGUS (SMP):
 "Kalau weekend, kamu lebih suka ngapain?"
@@ -277,6 +307,7 @@ A. Main bareng temen di luar
 B. Santai di rumah sendiri  
 C. Belajar hal baru
 D. Olahraga atau aktivitas fisik`;
+      
     } else if (userAge <= 18) {
       ageGroup = "SMA";
       ageContext = "User adalah siswa SMA (16-18 tahun)";
@@ -284,7 +315,7 @@ D. Olahraga atau aktivitas fisik`;
 - Boleh pakai istilah umum tapi tetap jelas
 - Lebih formal dari SMP tapi tetap casual
 - Pertanyaan MAX 20 kata, opsi MAX 12 kata`;
-
+      
       exampleQuestions = `
 CONTOH BAGUS (SMA):
 "Environment kerja yang bikin kamu paling produktif:"
@@ -292,6 +323,7 @@ A. Office dengan struktur jelas
 B. Outdoor atau field work
 C. Remote/WFH yang fleksibel
 D. Co-working space yang vibrant`;
+      
     } else {
       ageGroup = "MAHASISWA";
       ageContext = "User adalah mahasiswa/profesional (19+ tahun)";
@@ -299,7 +331,7 @@ D. Co-working space yang vibrant`;
 - Boleh pakai terminologi karir
 - Semi-formal tapi approachable
 - Pertanyaan bisa lebih kompleks`;
-
+      
       exampleQuestions = `
 CONTOH BAGUS (MAHASISWA):
 "Collaboration style yang cocok dengan kamu:"
@@ -308,7 +340,7 @@ B. Independent dengan weekly sync
 C. Cross-functional team projects
 D. Solo contributor dengan clear goals`;
     }
-
+    
     const systemInstruction = `Kamu adalah H-Mate AI (dibuat oleh Hammad), expert career advisor.
 
 🎯 MISSION: Generate ${questionCount} pertanyaan tes minat bakat yang FRESH, UNIK, dan VALID untuk career matching
@@ -324,67 +356,18 @@ ${languageLevel}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. WORK ENVIRONMENT (25% - ~5 pertanyaan)
-   Detect: Indoor vs outdoor, solo vs team, structured vs flexible
-   → Tech/Office vs Field/Outdoor, Manager vs Individual contributor
-
 2. INTERACTION STYLE (25% - ~5 pertanyaan)  
-   Detect: Introvert vs extrovert, leadership, communication
-   → Sales/HR/Teacher vs Engineer/Analyst, Leader vs Specialist
-
 3. PROBLEM SOLVING (20% - ~4 pertanyaan)
-   Detect: Analytical vs creative, detail vs big picture
-   → Data Scientist/Engineer vs Designer/Artist
-
 4. STRESS & PRESSURE (15% - ~3 pertanyaan)
-   Detect: Pressure tolerance, risk-taking, deadline
-   → Pilot/Dokter/Polisi vs Librarian/Researcher
-
 5. VALUES & MOTIVATION (15% - ~3 pertanyaan)
-   Detect: Help people vs create, stability vs variety
-   → Healthcare/Education vs Tech/Business
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏢 100+ KARIR YANG HARUS BISA DIDETEKSI:
+📋 CRITICAL OUTPUT REQUIREMENT:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-TECHNOLOGY: Software Engineer, Data Scientist, Cyber Security Analyst, Network Engineer, DevOps, Mobile Developer, Game Developer, Cloud Engineer
+HARUS OUTPUT PURE JSON - TIDAK BOLEH ADA TEXT LAIN!
 
-DESIGN: UI/UX Designer, Graphic Designer, Animator, 3D Artist, Interior Designer, Fashion Designer, Product Designer, Photographer
-
-MEDICAL: Dokter, Perawat, Apoteker, Psikolog, Fisioterapis, Bidan, Ahli Gizi, Radiografer, Dokter Hewan
-
-LAW & ORDER: Polisi, Tentara, Pengacara, Jaksa, Hakim, Notaris, Detektif
-
-AVIATION: Pilot, Pramugari, Air Traffic Controller, Aircraft Engineer
-
-ENGINEERING: Civil Engineer, Mechanical Engineer, Electrical Engineer, Architect, Chemical Engineer, Industrial Engineer
-
-BUSINESS: Entrepreneur, Business Analyst, Manager, Akuntan, Financial Analyst, Consultant, Project Manager
-
-MARKETING: Digital Marketing, Social Media Manager, SEO Specialist, Brand Manager, Sales Manager
-
-HR: HR Manager, Recruiter, Training Manager, HR Business Partner
-
-MEDIA: Jurnalis, Reporter, PR Specialist, Content Creator, Video Editor, Podcast Host
-
-EDUCATION: Guru, Dosen, Tutor, Research Scientist, Education Consultant
-
-CULINARY: Chef, Pastry Chef, Food Critic, Restaurant Manager
-
-ARTS: Musisi, Actor, Dancer, Film Director, Voice Actor
-
-GOVERNMENT: PNS, Diplomat, Politisi, Social Worker, NGO Worker
-
-SCIENCE: Physicist, Chemist, Biologist, Environmental Consultant
-
-SPORTS: Atlet, Personal Trainer, Sports Coach, Esports Player
-
-SPECIALIZED: Librarian, Translator, Actuary, Statistician
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 OUTPUT FORMAT:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+FORMAT WAJIB:
 {
   "questions": [
     {
@@ -400,127 +383,216 @@ SPECIALIZED: Librarian, Translator, Actuary, Statistician
   ]
 }
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ CRITICAL RULES:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+JANGAN:
+- ❌ Tulis penjelasan di luar JSON
+- ❌ Pakai markdown code blocks
+- ❌ Tambahkan komentar
+- ❌ Tulis "Berikut pertanyaannya:" atau teks lain
 
-1. VARIASI MAKSIMAL:
-   ✅ Gunakan SEED ${uniqueId} untuk generate berbeda
-   ✅ Rotasi kategori secara random
-   ✅ Mix pertanyaan easy, medium, complex
-   ✅ JANGAN pakai template yang sama persis
-
-2. KUALITAS PERTANYAAN:
-   ✅ Harus REFLEKTIF (tentang diri user)
-   ✅ Situasi KONKRET dan relatable
-   ✅ DISCRIMINATIVE (bisa bedain traits)
-   ✅ Hindari hypothetical/unrealistic
-
-3. KUALITAS OPSI:
-   ✅ 4 opsi WAJIB terisi lengkap
-   ✅ Opsi KONKRET tidak ambigu
-   ✅ Semua opsi valid choices (tidak ada "obviously better")
-   ✅ Map ke trait/career berbeda
-
-4. FORMAT:
-   ✅ Output PURE JSON (tidak ada markdown)
-   ✅ TIDAK BOLEH ada text diluar JSON
-   ✅ Tidak ada backticks atau \`\`\`json
-   ✅ Valid JSON structure
+LANGSUNG OUTPUT JSON SAJA!
 
 ${exampleQuestions}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚫 JANGAN DITIRU (BURUK):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PENTING: 
+- Semua ${questionCount} pertanyaan HARUS lengkap
+- Setiap pertanyaan HARUS punya 4 opsi
+- Semua field wajib terisi
+- Output HANYA JSON, tidak ada text lain`;
 
-❌ "Apa yang kamu suka?" (terlalu vague)
-❌ "Kamu orang seperti apa?" (terlalu abstrak)
-❌ "Apakah kamu suka kerja?" (yes/no, tidak discriminative)
-❌ Opsi generic: "Tergantung situasi" (tidak helpful)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 TIPS PERTANYAAN POWERFUL:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-✅ SITUATIONAL: "Kalau deadline mepet, kamu..."
-✅ BEHAVIORAL: "Biasanya kamu...", "Dalam situasi X..."
-✅ FORCED CHOICE: "Kamu lebih suka X atau Y?"
-✅ VARIASI STRUKTUR: Jangan semua mulai dengan "Kamu lebih suka..."
-
-PENTING: Gunakan seed untuk ensure UNIQUENESS!`;
-
-    const prompt = `Generate ${questionCount} pertanyaan tes minat bakat yang FRESH dan BERVARIASI.
+    const prompt = `Generate ${questionCount} pertanyaan tes minat bakat.
 
 SEED: ${uniqueId}
 TARGET: ${ageGroup}
 
-Requirements:
-- Distribusi kategori merata
-- Bahasa sesuai age group
-- Semua opsi terisi (4 opsi per pertanyaan)
-- Output PURE JSON tanpa markdown
-- Pertanyaan BERBEDA dari generate sebelumnya
+CRITICAL: Output ONLY valid JSON, no other text!
+
+Format:
+{"questions":[{"id":1,"question":"...","options":[{"value":"A","text":"..."},{"value":"B","text":"..."},{"value":"C","text":"..."},{"value":"D","text":"..."}]}]}
 
 Generate NOW!`;
 
-    const aiResponse = await generateAIContent(prompt, systemInstruction, true);
+    console.log(`🚀 Generating ${questionCount} questions for ${ageGroup}...`);
+    console.log(`   Seed: ${uniqueId}`);
 
-    // Tambahkan setelah generateAIContent
-    console.log("📊 AI Response Stats:");
-    console.log("   Length:", aiResponse.length);
-    console.log("   Has opening brace:", aiResponse.includes("{"));
-    console.log("   Has closing brace:", aiResponse.includes("}"));
-    console.log("   Has markdown:", aiResponse.includes("```"));
-    console.log("   First 100 chars:", aiResponse.substring(0, 100));
+    // Call AI with retry mechanism
+    let aiResponse;
+    let attempt = 0;
+    const maxAttempts = 3;
 
+    while (attempt < maxAttempts) {
+      attempt++;
+      console.log(`   Attempt ${attempt}/${maxAttempts}...`);
+
+      try {
+        aiResponse = await generateAIContent(prompt, systemInstruction, true);
+        
+        // Validasi response tidak kosong
+        if (!aiResponse || aiResponse.trim().length === 0) {
+          throw new Error("Empty AI response");
+        }
+
+        console.log(`   ✅ Got AI response (${aiResponse.length} chars)`);
+        break;
+      } catch (error) {
+        console.error(`   ❌ Attempt ${attempt} failed:`, error.message);
+        
+        if (attempt === maxAttempts) {
+          throw new Error("Failed to get valid AI response after multiple attempts");
+        }
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    // Parse response dengan fallback yang robust
     const parsedResponse = safeJSONParse(aiResponse);
 
     if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
-      throw new Error("Invalid response structure");
+      console.error("❌ Invalid response structure:", parsedResponse);
+      throw new Error("Response structure invalid");
     }
 
-    // Validate questions
-    const validQuestions = parsedResponse.questions.filter((q) => {
-      if (!q.options || q.options.length !== 4) return false;
-      return q.options.every(
-        (opt) => opt.text && opt.text.trim().length > 0 && opt.value
-      );
-    });
+    // Validate dan filter questions
+    const validQuestions = validateQuestions(parsedResponse.questions);
 
-    console.log(
-      `✅ Generated ${validQuestions.length}/${questionCount} valid questions`
-    );
-    console.log(`   Age: ${userAge || "default"} | Seed: ${randomSeed}`);
+    if (validQuestions.length === 0) {
+      throw new Error("No valid questions generated");
+    }
 
+    console.log(`✅ Generation successful:`);
+    console.log(`   Valid: ${validQuestions.length}/${questionCount}`);
+    console.log(`   Age: ${userAge || 'default'} (${ageGroup})`);
+    console.log(`   Seed: ${randomSeed}`);
+
+    // Jika kurang dari target, log warning tapi tetap return
     if (validQuestions.length < questionCount) {
-      console.log(`⚠️ Only ${validQuestions.length} valid questions generated`);
+      console.warn(`⚠️ Generated only ${validQuestions.length}/${questionCount} questions`);
     }
+
+    // PASTIKAN ID sequential
+    const questionsWithId = validQuestions.map((q, index) => ({
+      ...q,
+      id: index + 1
+    }));
 
     res.status(200).json({
       success: true,
       message: "Questions generated successfully",
-      data: {
-        questions: validQuestions,
+      data: { 
+        questions: questionsWithId,
         metadata: {
           seed: randomSeed,
           uniqueId: uniqueId,
           ageGroup: ageGroup,
           timestamp: timestamp,
-        },
+          generated: questionsWithId.length,
+          requested: questionCount
+        }
       },
     });
+    
   } catch (error) {
     console.error("❌ Generate questions error:", error);
+    console.error("   Stack:", error.stack);
+    
     res.status(500).json({
       success: false,
       message: error.message || "Failed to generate questions",
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       data: null,
     });
   }
 });
 
+// Helper functions (tambahkan di file yang sama)
+function safeJSONParse(text) {
+  console.log("🔍 Parsing AI response...");
+  console.log("   Length:", text.length);
+  
+  try {
+    // STEP 1: Bersihkan markdown
+    let cleaned = text
+      .replace(/```json\n?/gi, "")
+      .replace(/```\n?/g, "")
+      .trim();
 
+    // STEP 2: Parse langsung
+    const parsed = JSON.parse(cleaned);
+    console.log("   ✅ Direct parse successful");
+    return parsed;
+    
+  } catch (error) {
+    console.warn("   ⚠️ Direct parse failed, trying fallbacks...");
+    
+    // FALLBACK 1: Ekstrak JSON dari text
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        console.log("   ✅ Fallback 1 successful");
+        return parsed;
+      }
+    } catch (e) {
+      console.warn("   ⚠️ Fallback 1 failed");
+    }
+
+    // FALLBACK 2: Ekstrak questions array
+    try {
+      const questionsMatch = text.match(/"questions"\s*:\s*\[[\s\S]*\]/);
+      if (questionsMatch) {
+        const parsed = JSON.parse(`{${questionsMatch[0]}}`);
+        console.log("   ✅ Fallback 2 successful");
+        return parsed;
+      }
+    } catch (e) {
+      console.warn("   ⚠️ Fallback 2 failed");
+    }
+
+    // Log error detail
+    console.error("   ❌ All parsing failed");
+    console.log("   Preview:", text.substring(0, 200));
+    
+    throw new Error("Format respons AI tidak valid");
+  }
+}
+
+function validateQuestions(questions) {
+  if (!Array.isArray(questions)) {
+    console.error("❌ Questions is not array:", typeof questions);
+    return [];
+  }
+
+  const validated = questions.filter((q, index) => {
+    if (!q.question || typeof q.question !== 'string') {
+      console.warn(`⚠️ Q${index + 1}: Invalid question`);
+      return false;
+    }
+
+    if (!q.options || !Array.isArray(q.options) || q.options.length !== 4) {
+      console.warn(`⚠️ Q${index + 1}: Invalid options (${q.options?.length || 0}/4)`);
+      return false;
+    }
+
+    const validOptions = q.options.every(opt => 
+      opt.text && 
+      opt.text.trim().length > 0 && 
+      opt.value &&
+      typeof opt.text === 'string' &&
+      typeof opt.value === 'string'
+    );
+
+    if (!validOptions) {
+      console.warn(`⚠️ Q${index + 1}: Has invalid options`);
+      return false;
+    }
+
+    return true;
+  });
+
+  console.log(`✅ Validated ${validated.length}/${questions.length} questions`);
+  return validated;
+}
 
 // ============================================
 // ENDPOINT 2: ANALYZE RESULTS
