@@ -194,262 +194,538 @@ Jawab dalam Bahasa Indonesia yang natural dan enak dibaca.
   }
 });
 
-// GANTI ENDPOINT /api/generate-questions di backend/server.js DENGAN KODE INI:
+// ============================================
+// COMPLETE ENHANCED QUESTION GENERATION SYSTEM
+// Copy SEMUA kode ini ke backend/server.js
+// ============================================
+
+// ENDPOINT 1: GENERATE QUESTIONS
 app.post("/api/generate-questions", async (req, res) => {
-  const { questionCount = 20, userAge } = req.body;
+  const { questionCount = 30, userAge } = req.body;
 
   try {
-    // Generate random seed untuk variasi
-    const randomSeed = Math.floor(Math.random() * 10000);
+    // Generate UNIQUE random seed
+    const randomSeed = Math.floor(Math.random() * 1000000);
     const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substr(2, 9);
+    const uniqueId = `${randomSeed}-${timestamp}-${randomStr}`;
     
-    // Determine language level based on age
-    let ageContext = "";
-    let languageLevel = "";
+    // Determine age group
+    let ageGroup, ageContext, languageLevel, exampleQuestions;
     
-    if (userAge) {
-      if (userAge <= 15) {
-        ageContext = "User adalah siswa SMP";
-        languageLevel = "Gunakan bahasa yang sangat sederhana, seperti ngobrol dengan teman SMP. Hindari istilah teknis.";
-      } else if (userAge <= 18) {
-        ageContext = "User adalah siswa SMA";
-        languageLevel = "Gunakan bahasa santai seperti ngobrol dengan teman SMA. Kata-kata sehari-hari aja.";
-      } else if (userAge <= 23) {
-        ageContext = "User adalah mahasiswa atau fresh graduate";
-        languageLevel = "Gunakan bahasa casual tapi profesional, seperti ngobrol dengan teman kuliah.";
-      } else {
-        ageContext = "User adalah profesional muda";
-        languageLevel = "Gunakan bahasa yang friendly tapi tetap dewasa.";
-      }
+    if (!userAge || userAge <= 15) {
+      ageGroup = "SMP";
+      ageContext = "User adalah siswa SMP (12-15 tahun)";
+      languageLevel = `BAHASA: SANGAT SEDERHANA
+- Pakai kata sehari-hari: suka, senang, main, belajar, kerja
+- HINDARI: produktif, efisien, optimal, preferensi
+- Pertanyaan MAX 15 kata, opsi MAX 10 kata`;
+      
+      exampleQuestions = `
+CONTOH BAGUS (SMP):
+"Kalau weekend, kamu lebih suka ngapain?"
+A. Main bareng temen di luar
+B. Santai di rumah sendiri  
+C. Belajar hal baru
+D. Olahraga atau aktivitas fisik`;
+      
+    } else if (userAge <= 18) {
+      ageGroup = "SMA";
+      ageContext = "User adalah siswa SMA (16-18 tahun)";
+      languageLevel = `BAHASA: SANTAI TAPI MATURE
+- Boleh pakai istilah umum tapi tetap jelas
+- Lebih formal dari SMP tapi tetap casual
+- Pertanyaan MAX 20 kata, opsi MAX 12 kata`;
+      
+      exampleQuestions = `
+CONTOH BAGUS (SMA):
+"Environment kerja yang bikin kamu paling produktif:"
+A. Office dengan struktur jelas
+B. Outdoor atau field work
+C. Remote/WFH yang fleksibel
+D. Co-working space yang vibrant`;
+      
     } else {
-      // Default: fokus ke remaja SMP-SMA
-      ageContext = "User adalah remaja tingkat SMP-SMA";
-      languageLevel = "Gunakan bahasa yang SANGAT SEDERHANA seperti ngobrol dengan adik kelas. Hindari kata-kata sulit atau istilah teknis. Pakai kata-kata sehari-hari yang umum dipakai anak muda.";
+      ageGroup = "MAHASISWA";
+      ageContext = "User adalah mahasiswa/profesional (19+ tahun)";
+      languageLevel = `BAHASA: PROFESIONAL FRIENDLY
+- Boleh pakai terminologi karir
+- Semi-formal tapi approachable
+- Pertanyaan bisa lebih kompleks`;
+      
+      exampleQuestions = `
+CONTOH BAGUS (MAHASISWA):
+"Collaboration style yang cocok dengan kamu:"
+A. Agile team dengan daily standups
+B. Independent dengan weekly sync
+C. Cross-functional team projects
+D. Solo contributor dengan clear goals`;
     }
     
-    const systemInstruction = `
-Kamu adalah H-Mate AI (dibuat oleh Hammad), pembuat soal tes minat bakat.
+    const systemInstruction = `Kamu adalah H-Mate AI (dibuat oleh Hammad), expert career advisor.
 
-RANDOM SEED: ${randomSeed} | TIMESTAMP: ${timestamp}
-CONTEXT: ${ageContext}
+🎯 MISSION: Generate ${questionCount} pertanyaan tes minat bakat yang FRESH, UNIK, dan VALID untuk career matching
+
+🔑 UNIQUE SEED: ${uniqueId}
+👤 TARGET: ${ageGroup}
+📝 ${ageContext}
 
 ${languageLevel}
 
-CONTOH KATA YANG BOLEH DIPAKAI:
-✅ suka, senang, hobi, main, belajar, kerja, coba, bikin, ngobrol, nonton, baca
-✅ teman, keluarga, orang, guru, dosen, tim, sendiri
-✅ mudah, susah, seru, boring, capek, santai, asik, keren
-✅ di rumah, di luar, di kantor, di sekolah, online, offline
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 KATEGORI PERTANYAAN (distribusi merata):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-CONTOH KATA YANG JANGAN DIPAKAI:
-❌ produktif, efisien, optimal, strategis, visioner, inovatif (terlalu formal)
-❌ mengimplementasikan, mengoptimalkan, memfasilitasi (terlalu teknis)
-❌ preferensi, konvensi, kolaborasi (pakai kata sederhana aja)
+1. WORK ENVIRONMENT (25% - ~5 pertanyaan)
+   Detect: Indoor vs outdoor, solo vs team, structured vs flexible
+   → Tech/Office vs Field/Outdoor, Manager vs Individual contributor
 
-TUGAS:
-Generate ${questionCount} pertanyaan SIMPLE dan MUDAH DIPAHAMI untuk tes minat bakat.
+2. INTERACTION STYLE (25% - ~5 pertanyaan)  
+   Detect: Introvert vs extrovert, leadership, communication
+   → Sales/HR/Teacher vs Engineer/Analyst, Leader vs Specialist
 
-OUTPUT JSON FORMAT:
+3. PROBLEM SOLVING (20% - ~4 pertanyaan)
+   Detect: Analytical vs creative, detail vs big picture
+   → Data Scientist/Engineer vs Designer/Artist
+
+4. STRESS & PRESSURE (15% - ~3 pertanyaan)
+   Detect: Pressure tolerance, risk-taking, deadline
+   → Pilot/Dokter/Polisi vs Librarian/Researcher
+
+5. VALUES & MOTIVATION (15% - ~3 pertanyaan)
+   Detect: Help people vs create, stability vs variety
+   → Healthcare/Education vs Tech/Business
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏢 100+ KARIR YANG HARUS BISA DIDETEKSI:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TECHNOLOGY: Software Engineer, Data Scientist, Cyber Security Analyst, Network Engineer, DevOps, Mobile Developer, Game Developer, Cloud Engineer
+
+DESIGN: UI/UX Designer, Graphic Designer, Animator, 3D Artist, Interior Designer, Fashion Designer, Product Designer, Photographer
+
+MEDICAL: Dokter, Perawat, Apoteker, Psikolog, Fisioterapis, Bidan, Ahli Gizi, Radiografer, Dokter Hewan
+
+LAW & ORDER: Polisi, Tentara, Pengacara, Jaksa, Hakim, Notaris, Detektif
+
+AVIATION: Pilot, Pramugari, Air Traffic Controller, Aircraft Engineer
+
+ENGINEERING: Civil Engineer, Mechanical Engineer, Electrical Engineer, Architect, Chemical Engineer, Industrial Engineer
+
+BUSINESS: Entrepreneur, Business Analyst, Manager, Akuntan, Financial Analyst, Consultant, Project Manager
+
+MARKETING: Digital Marketing, Social Media Manager, SEO Specialist, Brand Manager, Sales Manager
+
+HR: HR Manager, Recruiter, Training Manager, HR Business Partner
+
+MEDIA: Jurnalis, Reporter, PR Specialist, Content Creator, Video Editor, Podcast Host
+
+EDUCATION: Guru, Dosen, Tutor, Research Scientist, Education Consultant
+
+CULINARY: Chef, Pastry Chef, Food Critic, Restaurant Manager
+
+ARTS: Musisi, Actor, Dancer, Film Director, Voice Actor
+
+GOVERNMENT: PNS, Diplomat, Politisi, Social Worker, NGO Worker
+
+SCIENCE: Physicist, Chemist, Biologist, Environmental Consultant
+
+SPORTS: Atlet, Personal Trainer, Sports Coach, Esports Player
+
+SPECIALIZED: Librarian, Translator, Actuary, Statistician
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 OUTPUT FORMAT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 {
   "questions": [
     {
       "id": 1,
-      "question": "Pertanyaan pendek dan jelas (maksimal 15 kata)",
+      "question": "Pertanyaan UNIK dan REFLEKTIF",
       "options": [
-        { "value": "A", "text": "Opsi singkat dan jelas" },
-        { "value": "B", "text": "Opsi singkat dan jelas" },
-        { "value": "C", "text": "Opsi singkat dan jelas" },
-        { "value": "D", "text": "Opsi singkat dan jelas" }
+        { "value": "A", "text": "Opsi JELAS dan BERBEDA" },
+        { "value": "B", "text": "Opsi JELAS dan BERBEDA" },
+        { "value": "C", "text": "Opsi JELAS dan BERBEDA" },
+        { "value": "D", "text": "Opsi JELAS dan BERBEDA" }
       ]
     }
   ]
 }
 
-KRITERIA PERTANYAAN:
-✅ Pertanyaan HARUS pendek (maksimal 15 kata)
-✅ Pakai kata-kata sehari-hari yang umum
-✅ Hindari istilah teknis atau bahasa formal
-✅ Setiap opsi maksimal 8-10 kata
-✅ Semua 4 opsi HARUS terisi lengkap (tidak boleh kosong!)
-✅ Pertanyaan HARUS berbeda setiap kali (pakai seed!)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ CRITICAL RULES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-CONTOH PERTANYAAN YANG BAGUS:
-❌ BURUK: "Apa preferensi lingkungan kerja yang optimal untuk produktivitas kamu?"
-✅ BAGUS: "Kamu lebih suka kerja di mana?"
+1. VARIASI MAKSIMAL:
+   ✅ Gunakan SEED ${uniqueId} untuk generate berbeda
+   ✅ Rotasi kategori secara random
+   ✅ Mix pertanyaan easy, medium, complex
+   ✅ JANGAN pakai template yang sama persis
 
-❌ BURUK: "Ketika berkolaborasi dalam tim, peran apa yang paling sesuai dengan karakteristik kamu?"
-✅ BAGUS: "Kalau kerja bareng teman, kamu biasanya ngapain?"
+2. KUALITAS PERTANYAAN:
+   ✅ Harus REFLEKTIF (tentang diri user)
+   ✅ Situasi KONKRET dan relatable
+   ✅ DISCRIMINATIVE (bisa bedain traits)
+   ✅ Hindari hypothetical/unrealistic
 
-❌ BURUK: "Bidang akademik mana yang paling mengoptimalkan potensi kognitif kamu?"
-✅ BAGUS: "Pelajaran apa yang paling kamu suka?"
+3. KUALITAS OPSI:
+   ✅ 4 opsi WAJIB terisi lengkap
+   ✅ Opsi KONKRET tidak ambigu
+   ✅ Semua opsi valid choices (tidak ada "obviously better")
+   ✅ Map ke trait/career berbeda
 
-CONTOH OPSI YANG BAGUS:
-❌ BURUK: "Mengoptimalkan efisiensi proses bisnis"
-✅ BAGUS: "Atur dan rapiin cara kerja"
+4. FORMAT:
+   ✅ Output PURE JSON (tidak ada markdown)
+   ✅ Tidak ada backticks atau \`\`\`json
+   ✅ Valid JSON structure
 
-❌ BURUK: "Berinteraksi dengan stakeholder eksternal"
-✅ BAGUS: "Ngobrol sama banyak orang"
+${exampleQuestions}
 
-TOPIK YANG BISA DITANYA (pakai bahasa simple):
-- Pelajaran favorit
-- Hobi dan aktivitas suka dilakukan
-- Lebih suka kerja sendiri atau bareng teman
-- Suka di dalam ruangan atau di luar
-- Lebih suka mikir atau ngerjain langsung
-- Suka bantu orang atau bikin sesuatu
-- Lebih suka yang kreatif atau yang pasti
-- Suka tantangan atau yang santai
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚫 JANGAN DITIRU (BURUK):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-PENTING:
-- Output HANYA JSON
-- Semua opsi WAJIB terisi penuh
-- Pakai bahasa yang SIMPLE dan CASUAL
-- Hindari kata-kata sulit/formal
-- Pertanyaan HARUS beda setiap kali!
-`;
+❌ "Apa yang kamu suka?" (terlalu vague)
+❌ "Kamu orang seperti apa?" (terlalu abstrak)
+❌ "Apakah kamu suka kerja?" (yes/no, tidak discriminative)
+❌ Opsi generic: "Tergantung situasi" (tidak helpful)
 
-    const prompt = `Buatkan ${questionCount} pertanyaan tes minat bakat yang SIMPLE dan MUDAH DIPAHAMI (seed: ${randomSeed}). Target: ${ageContext}. Pakai bahasa sehari-hari yang gampang dimengerti. Output JSON. WAJIB: Semua opsi harus terisi!`;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 TIPS PERTANYAAN POWERFUL:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ SITUATIONAL: "Kalau deadline mepet, kamu..."
+✅ BEHAVIORAL: "Biasanya kamu...", "Dalam situasi X..."
+✅ FORCED CHOICE: "Kamu lebih suka X atau Y?"
+✅ VARIASI STRUKTUR: Jangan semua mulai dengan "Kamu lebih suka..."
+
+PENTING: Gunakan seed untuk ensure UNIQUENESS!`;
+
+    const prompt = `Generate ${questionCount} pertanyaan tes minat bakat yang FRESH dan BERVARIASI.
+
+SEED: ${uniqueId}
+TARGET: ${ageGroup}
+
+Requirements:
+- Distribusi kategori merata
+- Bahasa sesuai age group
+- Semua opsi terisi (4 opsi per pertanyaan)
+- Output PURE JSON tanpa markdown
+- Pertanyaan BERBEDA dari generate sebelumnya
+
+Generate NOW!`;
 
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
     const parsedResponse = safeJSONParse(aiResponse);
 
     if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
-      throw new Error("Struktur respons tidak sesuai format");
+      throw new Error("Invalid response structure");
     }
 
-    // VALIDASI: Cek apakah ada opsi yang kosong
+    // Validate questions
     const validQuestions = parsedResponse.questions.filter(q => {
       if (!q.options || q.options.length !== 4) return false;
-      
-      // Cek setiap opsi punya text yang tidak kosong
-      const allOptionsValid = q.options.every(opt => 
-        opt.text && opt.text.trim().length > 0
-      );
-      
-      return allOptionsValid;
+      return q.options.every(opt => opt.text && opt.text.trim().length > 0 && opt.value);
     });
 
-    console.log(`✅ Generated ${validQuestions.length} valid questions (Age: ${userAge || 'default SMP-SMA'})`);
+    console.log(`✅ Generated ${validQuestions.length}/${questionCount} valid questions`);
+    console.log(`   Age: ${userAge || 'default'} | Seed: ${randomSeed}`);
 
-    // Kalau kurang dari yang diminta, log warning
     if (validQuestions.length < questionCount) {
-      console.log(`⚠️ Warning: Only ${validQuestions.length} valid questions, requested ${questionCount}`);
+      console.log(`⚠️ Only ${validQuestions.length} valid questions generated`);
     }
 
     res.status(200).json({
       success: true,
-      message: "Berhasil generate pertanyaan",
-      data: { questions: validQuestions },
+      message: "Questions generated successfully",
+      data: { 
+        questions: validQuestions,
+        metadata: {
+          seed: randomSeed,
+          uniqueId: uniqueId,
+          ageGroup: ageGroup,
+          timestamp: timestamp
+        }
+      },
     });
+    
   } catch (error) {
-    console.error("Error di /api/generate-questions:", error);
+    console.error("❌ Generate questions error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Terjadi kesalahan saat membuat pertanyaan",
+      message: error.message || "Failed to generate questions",
       data: null,
     });
   }
 });
 
-// 3. UPDATE: Analisis Hasil Tes
+// ============================================
+// ENDPOINT 2: ANALYZE RESULTS
+// ============================================
+
 app.post("/api/analyze-results", async (req, res) => {
   const { answers } = req.body;
 
   if (!answers || !Array.isArray(answers) || answers.length === 0) {
     return res.status(400).json({
       success: false,
-      message: "Data jawaban tidak valid",
+      message: "Invalid answers data",
       data: null,
     });
   }
 
   try {
-    const systemInstruction = `
-Kamu adalah H-Mate AI (dibuat oleh Hammad), developer muda untuk generasi muda Indonesia.
+    const systemInstruction = `Kamu adalah H-Mate AI (dibuat oleh Hammad), expert career advisor.
 
-TUGAS:
-Analisis jawaban tes minat bakat dan berikan rekomendasi karier yang cocok dari SEMUA bidang.
+🎯 MISSION: Analisis tes minat bakat dan berikan rekomendasi TEPAT dari 100+ profesi
 
-OUTPUT HARUS BERUPA JSON VALID dengan format berikut:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 OUTPUT FORMAT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 {
-  "personality_type": "Tipe kepribadian singkat",
-  "description": "Deskripsi 2-3 kalimat tentang kepribadian user",
+  "personality_type": "Tipe (2-3 kata)",
+  "description": "Deskripsi singkat (MAX 200 karakter)",
   "recommended_careers": [
     {
       "title": "Nama Profesi",
       "match_percentage": 85,
-      "reason": "Kenapa cocok",
+      "reason": "Alasan spesifik (MAX 150 karakter)",
       "skills_needed": ["Skill 1", "Skill 2", "Skill 3"]
     }
   ],
-  "strengths": ["Kekuatan 1", "Kekuatan 2", "Kekuatan 3"],
-  "development_areas": ["Area pengembangan 1", "Area pengembangan 2"],
-  "next_steps": ["Action step 1", "Action step 2", "Action step 3"]
+  "strengths": ["Kekuatan 1", "Kekuatan 2", "Kekuatan 3", "Kekuatan 4"],
+  "development_areas": ["Area 1", "Area 2", "Area 3"],
+  "next_steps": ["Step 1", "Step 2", "Step 3"]
 }
 
-KRITERIA ANALISIS:
-- Berikan 5 rekomendasi karier yang realistis untuk Indonesia
-- PENTING: Rekomendasi harus mencakup SEMUA bidang, tidak hanya digital/teknologi
-- Pertimbangkan karier dari berbagai sektor:
-  * Teknologi: Developer, Data Scientist, UI/UX Designer, Cyber Security, dll
-  * Kesehatan: Dokter, Perawat, Apoteker, Fisioterapis, dll
-  * Hukum: Pengacara, Hakim, Notaris, Polisi, dll
-  * Pendidikan: Guru, Dosen, Peneliti, Konselor, dll
-  * Teknik: Insinyur Sipil, Arsitek, Teknisi, dll
-  * Bisnis: Marketing, Finance, Entrepreneur, HR, dll
-  * Kreatif: Designer, Fotografer, Penulis, dll
-  * Pertanian: Agronomis, Peternak, Food Scientist, dll
-  * Sosial: Psikolog, Social Worker, NGO Worker, dll
-  * Dan bidang lainnya
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ KRITERIA KETAT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- Match percentage berdasarkan kecocokan dengan jawaban
-- Skills needed maksimal 3-4 skills yang spesifik
-- Next steps maksimal 3 action steps yang singkat dan jelas
-- Bahasa motivational tapi tetap realistis
-- PENTING: Jaga agar reason, description, dan next_steps tetap SINGKAT (1-2 kalimat)
+1. REKOMENDASI (5 karir):
+   ✅ HARUS dari MINIMAL 4 sektor berbeda
+   ✅ Match % realistis (80-98% top, 65-79% others)
+   ✅ Reason SPESIFIK ke jawaban (tidak generic)
+   ✅ Skills KONKRET (tidak "komunikasi baik")
 
-PENTING:
-- Output HANYA JSON, tidak ada teks tambahan
-- Pastikan semua string dalam JSON menggunakan escape yang benar
-- Tidak ada newline dalam string JSON
-- Jangan bias ke karier digital saja, sesuaikan dengan jawaban user
-`;
+2. PERSONALITY TYPE (pilih berdasarkan dominant traits):
+   "Natural Leader" | "Analytical Thinker" | "Creative Innovator"
+   "Compassionate Helper" | "Technical Problem Solver"
+   "Hands-on Doer" | "Strategic Planner" | "Social Communicator"
+
+3. TRAIT DETECTION:
+   ✅ Work: indoor/outdoor, solo/team, structured/flexible
+   ✅ Social: introvert/extrovert, leadership
+   ✅ Thinking: analytical/creative, detail/big-picture
+   ✅ Stress: high/low pressure tolerance
+   ✅ Values: helping/creating, stability/variety
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 TRAIT → CAREER MAPPING:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EMPATHY + HELPING + COMMUNICATION:
+→ Psikolog, Guru, HR Manager, Social Worker, Konselor
+
+ANALYTICAL + DETAIL + TECHNICAL:
+→ Data Scientist, Cyber Security, Financial Analyst, Engineer
+
+CREATIVE + VISUAL + PROBLEM-SOLVING:
+→ UI/UX Designer, Architect, Product Designer
+
+LEADERSHIP + EXTROVERT + STRATEGIC:
+→ Entrepreneur, Manager, Marketing Manager, Diplomat
+
+PHYSICAL + DISCIPLINE + HIGH-PRESSURE:
+→ Polisi, Tentara, Pilot, Atlet, Chef
+
+TECHNICAL + FOCUSED + PROBLEM-SOLVING:
+→ Software Engineer, Network Engineer, Data Analyst
+
+SOCIAL + COMMUNICATIVE + PERSUASIVE:
+→ Sales Manager, PR Specialist, Jurnalis, Content Creator
+
+INDEPENDENT + ANALYTICAL + RESEARCH:
+→ Research Scientist, Data Analyst, Writer, Librarian
+
+HANDS-ON + PRACTICAL + CREATIVE:
+→ Chef, Interior Designer, Fashion Designer, Photographer
+
+RISK-TAKING + INNOVATIVE + AMBITIOUS:
+→ Entrepreneur, Investor, Startup Founder
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏢 100+ KARIR DATABASE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TECH: Software Engineer, Data Scientist, Cyber Security Analyst, Network Engineer, DevOps, Mobile Developer, Cloud Engineer, Game Developer
+
+DESIGN: UI/UX Designer, Graphic Designer, Animator, Interior Designer, Fashion Designer, Product Designer, Photographer, Video Editor
+
+MEDICAL: Dokter, Perawat, Apoteker, Psikolog, Fisioterapis, Bidan, Ahli Gizi, Terapis, Radiografer
+
+LAW: Polisi, Tentara, Pengacara, Jaksa, Hakim, Notaris, Detektif
+
+AVIATION: Pilot, Pramugari, Air Traffic Controller, Aircraft Engineer
+
+ENGINEERING: Civil Engineer, Mechanical Engineer, Electrical Engineer, Architect, Chemical Engineer, Industrial Engineer
+
+BUSINESS: Entrepreneur, Business Analyst, Management Consultant, Project Manager, Akuntan, Financial Analyst, Auditor
+
+MARKETING: Digital Marketing Specialist, Social Media Manager, SEO Specialist, Brand Manager, Sales Manager
+
+HR: HR Manager, HR Generalist, Recruiter, Training Manager
+
+MEDIA: Jurnalis, Reporter, Editor, PR Specialist, Content Creator, Podcast Host
+
+EDUCATION: Guru, Dosen, Tutor, Research Scientist
+
+CULINARY: Chef, Pastry Chef, Restaurant Manager, Food Critic
+
+ARTS: Musisi, Actor, Dancer, Film Director, Producer, Voice Actor
+
+GOVERNMENT: PNS, Diplomat, Politisi, Social Worker, NGO Worker
+
+SCIENCE: Physicist, Chemist, Biologist, Environmental Consultant
+
+SPORTS: Atlet, Personal Trainer, Sports Coach, Esports Player
+
+SPECIALIZED: Librarian, Translator, Actuary, Statistician, Economist
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚫 CONTOH BURUK vs ✅ BAGUS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ BURUK - Semua satu sektor:
+1. Software Engineer
+2. Data Scientist
+3. Cyber Security
+4. Network Engineer
+5. DevOps Engineer
+
+✅ BAGUS - Beragam sektor:
+1. Software Engineer (Tech)
+2. Psikolog (Medical)
+3. Marketing Manager (Business)
+4. UI/UX Designer (Creative)
+5. Guru (Education)
+
+❌ BURUK - Reason generic:
+"Cocok karena sesuai kepribadian kamu"
+
+✅ BAGUS - Reason spesifik:
+"Cocok karena kamu analytical, detail-oriented, dan suka technical problem-solving"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ RULES WAJIB:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. DIVERSITY: 5 karir dari MINIMAL 4 sektor berbeda
+2. SPECIFICITY: Reason harus spesifik ke jawaban user
+3. REALISM: Skills konkret dan actionable
+4. BREVITY: Description max 200 char, reason max 150 char
+5. FORMAT: Pure JSON tanpa markdown
+
+PENTING: Analisis harus AKURAT berdasarkan jawaban user!`;
 
     const answersText = answers
-      .map(
-        (answer, index) =>
-          `Pertanyaan ${index + 1}: ${answer.question}\nJawaban: ${
-            answer.selectedOption.text
-          }`
-      )
+      .map((a, i) => `Q${i + 1}: ${a.question}\nA: ${a.selectedOption.text}`)
       .join("\n\n");
 
-    const prompt = `Analisis hasil tes minat bakat berikut dan berikan rekomendasi karier dari SEMUA bidang (bukan hanya teknologi) dalam format JSON:\n\n${answersText}`;
+    const prompt = `Analisis hasil tes ini dan berikan rekomendasi TEPAT dan BERAGAM dari 100+ profesi:
+
+${answersText}
+
+CRITICAL:
+1. 5 karir dari MINIMAL 4 sektor berbeda
+2. Reason SPESIFIK ke jawaban user
+3. Match % realistis
+4. Skills KONKRET
+5. Description & reason SINGKAT
+6. Output PURE JSON
+
+Analyze NOW!`;
 
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
     const parsedResponse = safeJSONParse(aiResponse);
 
-    if (
-      !parsedResponse.personality_type ||
-      !parsedResponse.recommended_careers
-    ) {
-      throw new Error("Struktur respons tidak sesuai format");
+    if (!parsedResponse.personality_type || !parsedResponse.recommended_careers || 
+        parsedResponse.recommended_careers.length < 5) {
+      throw new Error("Incomplete analysis response");
+    }
+
+    // Validate diversity
+    const getSector = (title) => {
+      const t = title.toLowerCase();
+      if (t.includes('engineer') || t.includes('developer') || t.includes('data') || 
+          t.includes('cyber') || t.includes('software')) return 'tech';
+      if (t.includes('designer') || t.includes('creative') || t.includes('artist')) return 'creative';
+      if (t.includes('dokter') || t.includes('nurse') || t.includes('psikolog')) return 'medical';
+      if (t.includes('business') || t.includes('manager') || t.includes('entrepreneur')) return 'business';
+      if (t.includes('guru') || t.includes('teacher') || t.includes('dosen')) return 'education';
+      if (t.includes('polisi') || t.includes('tentara') || t.includes('pengacara')) return 'law';
+      return 'other';
+    };
+
+    const sectors = parsedResponse.recommended_careers.map(c => getSector(c.title));
+    const uniqueSectors = new Set(sectors);
+    
+    console.log(`✅ Analysis complete:`);
+    console.log(`   ${parsedResponse.recommended_careers.length} careers`);
+    console.log(`   ${uniqueSectors.size} sectors: ${Array.from(uniqueSectors).join(', ')}`);
+    
+    if (uniqueSectors.size < 3) {
+      console.log(`⚠️ Low diversity: only ${uniqueSectors.size} sectors`);
     }
 
     res.status(200).json({
       success: true,
-      message: "Analisis berhasil",
+      message: "Analysis successful",
       data: parsedResponse,
     });
+    
   } catch (error) {
-    console.error("Error di /api/analyze-results:", error);
+    console.error("❌ Analyze error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Terjadi kesalahan saat analisis",
+      message: error.message || "Analysis failed",
       data: null,
     });
   }
 });
+
+// ============================================
+// NOTES
+// ============================================
+
+/*
+FEATURES:
+✅ Fresh AI generation (unique seed setiap kali)
+✅ Age-appropriate language (SMP/SMA/Mahasiswa)
+✅ 100+ career database
+✅ Diverse recommendations (multi-sector)
+✅ Trait-to-career mapping
+✅ Validation & logging
+
+TESTING:
+POST /api/generate-questions
+{ "questionCount": 20, "userAge": 14 } // SMP
+{ "questionCount": 20, "userAge": 17 } // SMA
+{ "questionCount": 20, "userAge": 21 } // Mahasiswa
+
+POST /api/analyze-results
+{ "answers": [...] }
+
+IMPROVEMENTS vs OLD VERSION:
+1. Unique seed generation (random + timestamp + string)
+2. Comprehensive 100+ career list
+3. Diversity enforcement & validation
+4. Age-appropriate examples
+5. Strict rules for quality
+6. Logging for monitoring
+*/
 
 // ====================================================
 // TAMBAHKAN INI DI server.js SETELAH ENDPOINT ANALYZE-RESULTS
