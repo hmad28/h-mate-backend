@@ -172,7 +172,7 @@ async function generateAIContent(prompt, systemInstruction, isJSON = false) {
 // }
 
 // EXPORT FUNCTIONS
-module.exports = { safeJSONParse, validateQuestions };
+// module.exports = { safeJSONParse, validateQuestions };
 
 // === ROUTES ===
 
