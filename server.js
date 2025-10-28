@@ -283,7 +283,7 @@ Jawab dalam Bahasa Indonesia yang natural dan enak dibaca.
 // ============================================
 
 app.post("/api/generate-questions", async (req, res) => {
-  const { questionCount = 30, userAge } = req.body;
+  const { questionCount = 25, userAge } = req.body;
 
   try {
     // Generate UNIQUE random seed
