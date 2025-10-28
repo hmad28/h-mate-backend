@@ -283,223 +283,41 @@ app.post("/api/generate-questions", async (req, res) => {
   const { questionCount = 30, userAge } = req.body;
 
   try {
-    // Generate UNIQUE random seed
-    const randomSeed = Math.floor(Math.random() * 1000000);
-    const timestamp = Date.now();
-    const randomStr = Math.random().toString(36).substr(2, 9);
-    const uniqueId = `${randomSeed}-${timestamp}-${randomStr}`;
-    
     // Determine age group
-    let ageGroup, ageContext, languageLevel, exampleQuestions;
-    
+    let ageGroup;
     if (!userAge || userAge <= 15) {
       ageGroup = "SMP";
-      ageContext = "User adalah siswa SMP (12-15 tahun)";
-      languageLevel = `BAHASA: SANGAT SEDERHANA
-- Pakai kata sehari-hari: suka, senang, main, belajar, kerja
-- HINDARI: produktif, efisien, optimal, preferensi
-- Pertanyaan MAX 15 kata, opsi MAX 10 kata`;
-      
-      exampleQuestions = `
-CONTOH BAGUS (SMP):
-"Kalau weekend, kamu lebih suka ngapain?"
-A. Main bareng temen di luar
-B. Santai di rumah sendiri  
-C. Belajar hal baru
-D. Olahraga atau aktivitas fisik`;
-      
     } else if (userAge <= 18) {
       ageGroup = "SMA";
-      ageContext = "User adalah siswa SMA (16-18 tahun)";
-      languageLevel = `BAHASA: SANTAI TAPI MATURE
-- Boleh pakai istilah umum tapi tetap jelas
-- Lebih formal dari SMP tapi tetap casual
-- Pertanyaan MAX 20 kata, opsi MAX 12 kata`;
-      
-      exampleQuestions = `
-CONTOH BAGUS (SMA):
-"Environment kerja yang bikin kamu paling produktif:"
-A. Office dengan struktur jelas
-B. Outdoor atau field work
-C. Remote/WFH yang fleksibel
-D. Co-working space yang vibrant`;
-      
     } else {
       ageGroup = "MAHASISWA";
-      ageContext = "User adalah mahasiswa/profesional (19+ tahun)";
-      languageLevel = `BAHASA: PROFESIONAL FRIENDLY
-- Boleh pakai terminologi karir
-- Semi-formal tapi approachable
-- Pertanyaan bisa lebih kompleks`;
-      
-      exampleQuestions = `
-CONTOH BAGUS (MAHASISWA):
-"Collaboration style yang cocok dengan kamu:"
-A. Agile team dengan daily standups
-B. Independent dengan weekly sync
-C. Cross-functional team projects
-D. Solo contributor dengan clear goals`;
-    }
-    
-    const systemInstruction = `Kamu adalah H-Mate AI (dibuat oleh Hammad), expert career advisor.
-
-🎯 MISSION: Generate ${questionCount} pertanyaan tes minat bakat yang FRESH, UNIK, dan VALID untuk career matching
-
-🔑 UNIQUE SEED: ${uniqueId}
-👤 TARGET: ${ageGroup}
-📝 ${ageContext}
-
-${languageLevel}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 KATEGORI PERTANYAAN (distribusi merata):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. WORK ENVIRONMENT (25% - ~5 pertanyaan)
-2. INTERACTION STYLE (25% - ~5 pertanyaan)  
-3. PROBLEM SOLVING (20% - ~4 pertanyaan)
-4. STRESS & PRESSURE (15% - ~3 pertanyaan)
-5. VALUES & MOTIVATION (15% - ~3 pertanyaan)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 CRITICAL OUTPUT REQUIREMENT:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-HARUS OUTPUT PURE JSON - TIDAK BOLEH ADA TEXT LAIN!
-
-FORMAT WAJIB:
-{
-  "questions": [
-    {
-      "id": 1,
-      "question": "Pertanyaan UNIK dan REFLEKTIF",
-      "options": [
-        { "value": "A", "text": "Opsi JELAS dan BERBEDA" },
-        { "value": "B", "text": "Opsi JELAS dan BERBEDA" },
-        { "value": "C", "text": "Opsi JELAS dan BERBEDA" },
-        { "value": "D", "text": "Opsi JELAS dan BERBEDA" }
-      ]
-    }
-  ]
-}
-
-JANGAN:
-- ❌ Tulis penjelasan di luar JSON
-- ❌ Pakai markdown code blocks
-- ❌ Tambahkan komentar
-- ❌ Tulis "Berikut pertanyaannya:" atau teks lain
-
-LANGSUNG OUTPUT JSON SAJA!
-
-${exampleQuestions}
-
-PENTING: 
-- Semua ${questionCount} pertanyaan HARUS lengkap
-- Setiap pertanyaan HARUS punya 4 opsi
-- Semua field wajib terisi
-- Output HANYA JSON, tidak ada text lain`;
-
-    const prompt = `Generate ${questionCount} pertanyaan tes minat bakat.
-
-SEED: ${uniqueId}
-TARGET: ${ageGroup}
-
-CRITICAL: Output ONLY valid JSON, no other text!
-
-Format:
-{"questions":[{"id":1,"question":"...","options":[{"value":"A","text":"..."},{"value":"B","text":"..."},{"value":"C","text":"..."},{"value":"D","text":"..."}]}]}
-
-Generate NOW!`;
-
-    console.log(`🚀 Generating ${questionCount} questions for ${ageGroup}...`);
-    console.log(`   Seed: ${uniqueId}`);
-
-    // Call AI with retry mechanism
-    let aiResponse;
-    let attempt = 0;
-    const maxAttempts = 3;
-
-    while (attempt < maxAttempts) {
-      attempt++;
-      console.log(`   Attempt ${attempt}/${maxAttempts}...`);
-
-      try {
-        aiResponse = await generateAIContent(prompt, systemInstruction, true);
-        
-        // Validasi response tidak kosong
-        if (!aiResponse || aiResponse.trim().length === 0) {
-          throw new Error("Empty AI response");
-        }
-
-        console.log(`   ✅ Got AI response (${aiResponse.length} chars)`);
-        break;
-      } catch (error) {
-        console.error(`   ❌ Attempt ${attempt} failed:`, error.message);
-        
-        if (attempt === maxAttempts) {
-          throw new Error("Failed to get valid AI response after multiple attempts");
-        }
-        
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
     }
 
-    // Parse response dengan fallback yang robust
-    const parsedResponse = safeJSONParse(aiResponse);
+    console.log(`🎯 Selecting ${questionCount} questions for ${ageGroup}...`);
 
-    if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
-      console.error("❌ Invalid response structure:", parsedResponse);
-      throw new Error("Response structure invalid");
-    }
+    // SELECT dari pool (INSTANT!)
+    const questions = selectSmartQuestions(ageGroup, questionCount);
 
-    // Validate dan filter questions
-    const validQuestions = validateQuestions(parsedResponse.questions);
-
-    if (validQuestions.length === 0) {
-      throw new Error("No valid questions generated");
-    }
-
-    console.log(`✅ Generation successful:`);
-    console.log(`   Valid: ${validQuestions.length}/${questionCount}`);
-    console.log(`   Age: ${userAge || 'default'} (${ageGroup})`);
-    console.log(`   Seed: ${randomSeed}`);
-
-    // Jika kurang dari target, log warning tapi tetap return
-    if (validQuestions.length < questionCount) {
-      console.warn(`⚠️ Generated only ${validQuestions.length}/${questionCount} questions`);
-    }
-
-    // PASTIKAN ID sequential
-    const questionsWithId = validQuestions.map((q, index) => ({
-      ...q,
-      id: index + 1
-    }));
+    console.log(`✅ Selected ${questions.length} questions in <10ms`);
+    console.log(`   Age: ${userAge || "default"} (${ageGroup})`);
 
     res.status(200).json({
       success: true,
       message: "Questions generated successfully",
-      data: { 
-        questions: questionsWithId,
+      data: {
+        questions: questions,
         metadata: {
-          seed: randomSeed,
-          uniqueId: uniqueId,
           ageGroup: ageGroup,
-          timestamp: timestamp,
-          generated: questionsWithId.length,
-          requested: questionCount
-        }
+          timestamp: Date.now(),
+          source: "smart_pool",
+        },
       },
     });
-    
   } catch (error) {
     console.error("❌ Generate questions error:", error);
-    console.error("   Stack:", error.stack);
-    
     res.status(500).json({
       success: false,
       message: error.message || "Failed to generate questions",
-      error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       data: null,
     });
   }
