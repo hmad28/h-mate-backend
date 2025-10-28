@@ -278,55 +278,243 @@ Jawab dalam Bahasa Indonesia yang natural dan enak dibaca.
 // Copy SEMUA kode ini ke backend/server.js
 // ============================================
 
-// ENDPOINT DENGAN ERROR HANDLING YANG LEBIH BAIK
+// ============================================
+// ENDPOINT: GENERATE QUESTIONS
+// ============================================
+
 app.post("/api/generate-questions", async (req, res) => {
   const { questionCount = 30, userAge } = req.body;
 
   try {
+    // Generate UNIQUE random seed
+    const randomSeed = Math.floor(Math.random() * 1000000);
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substr(2, 9);
+    const uniqueId = `${randomSeed}-${timestamp}-${randomStr}`;
+    
     // Determine age group
-    let ageGroup;
+    let ageGroup, ageContext, languageLevel, exampleQuestions;
+    
     if (!userAge || userAge <= 15) {
       ageGroup = "SMP";
+      ageContext = "User adalah siswa SMP (12-15 tahun)";
+      languageLevel = `BAHASA: SANGAT SEDERHANA
+- Pakai kata sehari-hari: suka, senang, main, belajar, kerja
+- HINDARI: produktif, efisien, optimal, preferensi
+- Pertanyaan MAX 15 kata, opsi MAX 10 kata`;
+      
+      exampleQuestions = `
+CONTOH BAGUS (SMP):
+"Kalau weekend, kamu lebih suka ngapain?"
+A. Main bareng temen di luar
+B. Santai di rumah sendiri  
+C. Belajar hal baru
+D. Olahraga atau aktivitas fisik`;
+      
     } else if (userAge <= 18) {
       ageGroup = "SMA";
+      ageContext = "User adalah siswa SMA (16-18 tahun)";
+      languageLevel = `BAHASA: SANTAI TAPI MATURE
+- Boleh pakai istilah umum tapi tetap jelas
+- Lebih formal dari SMP tapi tetap casual
+- Pertanyaan MAX 20 kata, opsi MAX 12 kata`;
+      
+      exampleQuestions = `
+CONTOH BAGUS (SMA):
+"Environment kerja yang bikin kamu paling produktif:"
+A. Office dengan struktur jelas
+B. Outdoor atau field work
+C. Remote/WFH yang fleksibel
+D. Co-working space yang vibrant`;
+      
     } else {
       ageGroup = "MAHASISWA";
+      ageContext = "User adalah mahasiswa/profesional (19+ tahun)";
+      languageLevel = `BAHASA: PROFESIONAL FRIENDLY
+- Boleh pakai terminologi karir
+- Semi-formal tapi approachable
+- Pertanyaan bisa lebih kompleks`;
+      
+      exampleQuestions = `
+CONTOH BAGUS (MAHASISWA):
+"Collaboration style yang cocok dengan kamu:"
+A. Agile team dengan daily standups
+B. Independent dengan weekly sync
+C. Cross-functional team projects
+D. Solo contributor dengan clear goals`;
+    }
+    
+    const systemInstruction = `Kamu adalah H-Mate AI (dibuat oleh Hammad), expert career advisor.
+
+🎯 MISSION: Generate ${questionCount} pertanyaan tes minat bakat yang FRESH, UNIK, dan VALID untuk career matching
+
+🔑 UNIQUE SEED: ${uniqueId}
+👤 TARGET: ${ageGroup}
+📝 ${ageContext}
+
+${languageLevel}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 KATEGORI PERTANYAAN (distribusi merata):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. WORK ENVIRONMENT (25%)
+2. INTERACTION STYLE (25%)
+3. PROBLEM SOLVING (20%)
+4. STRESS & PRESSURE (15%)
+5. VALUES & MOTIVATION (15%)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 CRITICAL OUTPUT REQUIREMENT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HARUS OUTPUT PURE JSON - TIDAK BOLEH ADA TEXT LAIN!
+
+FORMAT WAJIB:
+{
+  "questions": [
+    {
+      "id": 1,
+      "question": "Pertanyaan UNIK dan REFLEKTIF",
+      "options": [
+        { "value": "A", "text": "Opsi JELAS dan BERBEDA" },
+        { "value": "B", "text": "Opsi JELAS dan BERBEDA" },
+        { "value": "C", "text": "Opsi JELAS dan BERBEDA" },
+        { "value": "D", "text": "Opsi JELAS dan BERBEDA" }
+      ]
+    }
+  ]
+}
+
+JANGAN:
+- ❌ Tulis penjelasan di luar JSON
+- ❌ Pakai markdown code blocks
+- ❌ Tambahkan komentar
+- ❌ Tulis "Berikut pertanyaannya:" atau teks lain
+
+LANGSUNG OUTPUT JSON SAJA!
+
+${exampleQuestions}
+
+PENTING: 
+- Semua ${questionCount} pertanyaan HARUS lengkap
+- Setiap pertanyaan HARUS punya 4 opsi
+- Semua field wajib terisi
+- Output HANYA JSON, tidak ada text lain`;
+
+    const prompt = `Generate ${questionCount} pertanyaan tes minat bakat.
+
+SEED: ${uniqueId}
+TARGET: ${ageGroup}
+
+CRITICAL: Output ONLY valid JSON, no other text!
+
+Format:
+{"questions":[{"id":1,"question":"...","options":[{"value":"A","text":"..."},{"value":"B","text":"..."},{"value":"C","text":"..."},{"value":"D","text":"..."}]}]}
+
+Generate NOW!`;
+
+    console.log(`🚀 Generating ${questionCount} questions for ${ageGroup}...`);
+    console.log(`   Seed: ${uniqueId}`);
+
+    // Call AI with retry mechanism
+    let aiResponse;
+    let attempt = 0;
+    const maxAttempts = 3;
+
+    while (attempt < maxAttempts) {
+      attempt++;
+      console.log(`   📡 Attempt ${attempt}/${maxAttempts}...`);
+
+      try {
+        aiResponse = await generateAIContent(prompt, systemInstruction, true);
+        
+        // Validasi response tidak kosong
+        if (!aiResponse || aiResponse.trim().length === 0) {
+          throw new Error("Empty AI response");
+        }
+
+        console.log(`   ✅ Got AI response (${aiResponse.length} chars)`);
+        break;
+      } catch (error) {
+        console.error(`   ❌ Attempt ${attempt} failed:`, error.message);
+        
+        if (attempt === maxAttempts) {
+          throw new Error("Failed to get valid AI response after multiple attempts");
+        }
+        
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
     }
 
-    console.log(`🎯 Selecting ${questionCount} questions for ${ageGroup}...`);
+    // Parse response dengan fallback yang robust
+    console.log("🔍 Parsing AI response...");
+    const parsedResponse = safeJSONParse(aiResponse);
 
-    // SELECT dari pool (INSTANT!)
-    const questions = selectSmartQuestions(ageGroup, questionCount);
+    if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
+      console.error("❌ Invalid response structure:", parsedResponse);
+      throw new Error("Response structure invalid - missing questions array");
+    }
 
-    console.log(`✅ Selected ${questions.length} questions in <10ms`);
-    console.log(`   Age: ${userAge || "default"} (${ageGroup})`);
+    // Validate dan filter questions
+    console.log("✔️ Validating questions...");
+    const validQuestions = validateQuestions(parsedResponse.questions);
+
+    if (validQuestions.length === 0) {
+      throw new Error("No valid questions generated");
+    }
+
+    console.log(`✅ Generation successful:`);
+    console.log(`   Valid: ${validQuestions.length}/${questionCount}`);
+    console.log(`   Age: ${userAge || 'default'} (${ageGroup})`);
+
+    // Jika kurang dari target, log warning tapi tetap return
+    if (validQuestions.length < questionCount) {
+      console.warn(`⚠️ Generated only ${validQuestions.length}/${questionCount} questions`);
+    }
+
+    // PASTIKAN ID sequential
+    const questionsWithId = validQuestions.map((q, index) => ({
+      ...q,
+      id: index + 1
+    }));
 
     res.status(200).json({
       success: true,
       message: "Questions generated successfully",
-      data: {
-        questions: questions,
+      data: { 
+        questions: questionsWithId,
         metadata: {
+          seed: randomSeed,
+          uniqueId: uniqueId,
           ageGroup: ageGroup,
-          timestamp: Date.now(),
-          source: "smart_pool",
-        },
+          timestamp: timestamp,
+          generated: questionsWithId.length,
+          requested: questionCount
+        }
       },
     });
+    
   } catch (error) {
-    console.error("❌ Generate questions error:", error);
+    console.error("❌ Generate questions error:", error.message);
+    console.error("   Stack:", error.stack);
+    
     res.status(500).json({
       success: false,
       message: error.message || "Failed to generate questions",
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       data: null,
     });
   }
 });
 
-// Helper functions (tambahkan di file yang sama)
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
 function safeJSONParse(text) {
-  console.log("🔍 Parsing AI response...");
-  console.log("   Length:", text.length);
+  console.log("   🔍 Parsing...");
   
   try {
     // STEP 1: Bersihkan markdown
@@ -348,7 +536,7 @@ function safeJSONParse(text) {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        console.log("   ✅ Fallback 1 successful");
+        console.log("   ✅ Fallback 1 successful (JSON extraction)");
         return parsed;
       }
     } catch (e) {
@@ -360,7 +548,7 @@ function safeJSONParse(text) {
       const questionsMatch = text.match(/"questions"\s*:\s*\[[\s\S]*\]/);
       if (questionsMatch) {
         const parsed = JSON.parse(`{${questionsMatch[0]}}`);
-        console.log("   ✅ Fallback 2 successful");
+        console.log("   ✅ Fallback 2 successful (questions array extraction)");
         return parsed;
       }
     } catch (e) {
@@ -368,10 +556,10 @@ function safeJSONParse(text) {
     }
 
     // Log error detail
-    console.error("   ❌ All parsing failed");
-    console.log("   Preview:", text.substring(0, 200));
+    console.error("   ❌ All parsing attempts failed");
+    console.log("   Response preview:", text.substring(0, 200) + "...");
     
-    throw new Error("Format respons AI tidak valid");
+    throw new Error("Invalid AI response format - cannot parse JSON");
   }
 }
 
@@ -382,23 +570,30 @@ function validateQuestions(questions) {
   }
 
   const validated = questions.filter((q, index) => {
-    if (!q.question || typeof q.question !== 'string') {
+    // Check question
+    if (!q.question || typeof q.question !== 'string' || q.question.trim().length === 0) {
       console.warn(`⚠️ Q${index + 1}: Invalid question`);
       return false;
     }
 
+    // Check options array
     if (!q.options || !Array.isArray(q.options) || q.options.length !== 4) {
-      console.warn(`⚠️ Q${index + 1}: Invalid options (${q.options?.length || 0}/4)`);
+      console.warn(`⚠️ Q${index + 1}: Invalid options count (${q.options?.length || 0}/4)`);
       return false;
     }
 
-    const validOptions = q.options.every(opt => 
-      opt.text && 
-      opt.text.trim().length > 0 && 
-      opt.value &&
-      typeof opt.text === 'string' &&
-      typeof opt.value === 'string'
-    );
+    // Check each option
+    const validOptions = q.options.every((opt, optIdx) => {
+      if (!opt.text || typeof opt.text !== 'string' || opt.text.trim().length === 0) {
+        console.warn(`⚠️ Q${index + 1} Option ${optIdx + 1}: Empty text`);
+        return false;
+      }
+      if (!opt.value || typeof opt.value !== 'string') {
+        console.warn(`⚠️ Q${index + 1} Option ${optIdx + 1}: Invalid value`);
+        return false;
+      }
+      return true;
+    });
 
     if (!validOptions) {
       console.warn(`⚠️ Q${index + 1}: Has invalid options`);
@@ -408,12 +603,12 @@ function validateQuestions(questions) {
     return true;
   });
 
-  console.log(`✅ Validated ${validated.length}/${questions.length} questions`);
+  console.log(`   ✅ Validated ${validated.length}/${questions.length} questions`);
   return validated;
 }
 
 // ============================================
-// ENDPOINT 2: ANALYZE RESULTS
+// ENDPOINT: ANALYZE RESULTS
 // ============================================
 
 app.post("/api/analyze-results", async (req, res) => {
@@ -452,6 +647,8 @@ app.post("/api/analyze-results", async (req, res) => {
   "next_steps": ["Step 1", "Step 2", "Step 3"]
 }
 
+CRITICAL: Output PURE JSON tanpa markdown atau text lain!
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ KRITERIA KETAT:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -467,118 +664,7 @@ app.post("/api/analyze-results", async (req, res) => {
    "Compassionate Helper" | "Technical Problem Solver"
    "Hands-on Doer" | "Strategic Planner" | "Social Communicator"
 
-3. TRAIT DETECTION:
-   ✅ Work: indoor/outdoor, solo/team, structured/flexible
-   ✅ Social: introvert/extrovert, leadership
-   ✅ Thinking: analytical/creative, detail/big-picture
-   ✅ Stress: high/low pressure tolerance
-   ✅ Values: helping/creating, stability/variety
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 TRAIT → CAREER MAPPING:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-EMPATHY + HELPING + COMMUNICATION:
-→ Psikolog, Guru, HR Manager, Social Worker, Konselor
-
-ANALYTICAL + DETAIL + TECHNICAL:
-→ Data Scientist, Cyber Security, Financial Analyst, Engineer
-
-CREATIVE + VISUAL + PROBLEM-SOLVING:
-→ UI/UX Designer, Architect, Product Designer
-
-LEADERSHIP + EXTROVERT + STRATEGIC:
-→ Entrepreneur, Manager, Marketing Manager, Diplomat
-
-PHYSICAL + DISCIPLINE + HIGH-PRESSURE:
-→ Polisi, Tentara, Pilot, Atlet, Chef
-
-TECHNICAL + FOCUSED + PROBLEM-SOLVING:
-→ Software Engineer, Network Engineer, Data Analyst
-
-SOCIAL + COMMUNICATIVE + PERSUASIVE:
-→ Sales Manager, PR Specialist, Jurnalis, Content Creator
-
-INDEPENDENT + ANALYTICAL + RESEARCH:
-→ Research Scientist, Data Analyst, Writer, Librarian
-
-HANDS-ON + PRACTICAL + CREATIVE:
-→ Chef, Interior Designer, Fashion Designer, Photographer
-
-RISK-TAKING + INNOVATIVE + AMBITIOUS:
-→ Entrepreneur, Investor, Startup Founder
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏢 100+ KARIR DATABASE:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-TECH: Software Engineer, Data Scientist, Cyber Security Analyst, Network Engineer, DevOps, Mobile Developer, Cloud Engineer, Game Developer
-
-DESIGN: UI/UX Designer, Graphic Designer, Animator, Interior Designer, Fashion Designer, Product Designer, Photographer, Video Editor
-
-MEDICAL: Dokter, Perawat, Apoteker, Psikolog, Fisioterapis, Bidan, Ahli Gizi, Terapis, Radiografer
-
-LAW: Polisi, Tentara, Pengacara, Jaksa, Hakim, Notaris, Detektif
-
-AVIATION: Pilot, Pramugari, Air Traffic Controller, Aircraft Engineer
-
-ENGINEERING: Civil Engineer, Mechanical Engineer, Electrical Engineer, Architect, Chemical Engineer, Industrial Engineer
-
-BUSINESS: Entrepreneur, Business Analyst, Management Consultant, Project Manager, Akuntan, Financial Analyst, Auditor
-
-MARKETING: Digital Marketing Specialist, Social Media Manager, SEO Specialist, Brand Manager, Sales Manager
-
-HR: HR Manager, HR Generalist, Recruiter, Training Manager
-
-MEDIA: Jurnalis, Reporter, Editor, PR Specialist, Content Creator, Podcast Host
-
-EDUCATION: Guru, Dosen, Tutor, Research Scientist
-
-CULINARY: Chef, Pastry Chef, Restaurant Manager, Food Critic
-
-ARTS: Musisi, Actor, Dancer, Film Director, Producer, Voice Actor
-
-GOVERNMENT: PNS, Diplomat, Politisi, Social Worker, NGO Worker
-
-SCIENCE: Physicist, Chemist, Biologist, Environmental Consultant
-
-SPORTS: Atlet, Personal Trainer, Sports Coach, Esports Player
-
-SPECIALIZED: Librarian, Translator, Actuary, Statistician, Economist
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚫 CONTOH BURUK vs ✅ BAGUS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-❌ BURUK - Semua satu sektor:
-1. Software Engineer
-2. Data Scientist
-3. Cyber Security
-4. Network Engineer
-5. DevOps Engineer
-
-✅ BAGUS - Beragam sektor:
-1. Software Engineer (Tech)
-2. Psikolog (Medical)
-3. Marketing Manager (Business)
-4. UI/UX Designer (Creative)
-5. Guru (Education)
-
-❌ BURUK - Reason generic:
-"Cocok karena sesuai kepribadian kamu"
-
-✅ BAGUS - Reason spesifik:
-"Cocok karena kamu analytical, detail-oriented, dan suka technical problem-solving"
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ RULES WAJIB:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. DIVERSITY: 5 karir dari MINIMAL 4 sektor berbeda
-2. SPECIFICITY: Reason harus spesifik ke jawaban user
-3. REALISM: Skills konkret dan actionable
-4. BREVITY: Description max 200 char, reason max 150 char
-5. FORMAT: Pure JSON tanpa markdown
+3. DIVERSITY: Pastikan 5 karir dari MINIMAL 4 sektor berbeda (Tech, Creative, Medical, Business, Education, Law, dll)
 
 PENTING: Analisis harus AKURAT berdasarkan jawaban user!`;
 
@@ -595,12 +681,14 @@ CRITICAL:
 2. Reason SPESIFIK ke jawaban user
 3. Match % realistis
 4. Skills KONKRET
-5. Description & reason SINGKAT
-6. Output PURE JSON
+5. Output PURE JSON
 
 Analyze NOW!`;
 
+    console.log("🔬 Analyzing test results...");
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
+    
+    console.log("🔍 Parsing analysis...");
     const parsedResponse = safeJSONParse(aiResponse);
 
     if (!parsedResponse.personality_type || !parsedResponse.recommended_careers || 
@@ -629,7 +717,7 @@ Analyze NOW!`;
     console.log(`   ${uniqueSectors.size} sectors: ${Array.from(uniqueSectors).join(', ')}`);
     
     if (uniqueSectors.size < 3) {
-      console.log(`⚠️ Low diversity: only ${uniqueSectors.size} sectors`);
+      console.warn(`⚠️ Low diversity: only ${uniqueSectors.size} sectors`);
     }
 
     res.status(200).json({
@@ -639,7 +727,7 @@ Analyze NOW!`;
     });
     
   } catch (error) {
-    console.error("❌ Analyze error:", error);
+    console.error("❌ Analyze error:", error.message);
     res.status(500).json({
       success: false,
       message: error.message || "Analysis failed",
