@@ -64,31 +64,80 @@ async function generateAIContent(prompt, systemInstruction, isJSON = false) {
   }
 }
 
-// Helper untuk parse JSON dengan fallback
 function safeJSONParse(text) {
   try {
-    // Bersihkan dari markdown code blocks
+    // 1. Bersihkan markdown code blocks (semua variasi)
     let cleaned = text
-      .replace(/```json\n?/g, "")
-      .replace(/```\n?/g, "")
+      .replace(/^```json\s*/gm, "")
+      .replace(/^```\s*/gm, "")
+      .replace(/```$/gm, "")
       .trim();
 
-    // Coba parse langsung
-    return JSON.parse(cleaned);
-  } catch (error) {
-    console.error("JSON Parse Error:", error.message);
-    console.log("Raw response length:", text.length);
-    console.log("Raw response preview:", text.substring(0, 1000));
-    console.log("Raw response end:", text.substring(text.length - 200));
+    // 2. Hapus teks sebelum JSON (cari kurung kurawal pertama)
+    const firstBrace = cleaned.indexOf("{");
+    if (firstBrace > 0) {
+      cleaned = cleaned.substring(firstBrace);
+    }
 
-    // Coba ekstrak JSON dari text
+    // 3. Hapus teks setelah JSON (cari kurung kurawal terakhir)
+    const lastBrace = cleaned.lastIndexOf("}");
+    if (lastBrace !== -1 && lastBrace < cleaned.length - 1) {
+      cleaned = cleaned.substring(0, lastBrace + 1);
+    }
+
+    // 4. Parse JSON
+    const parsed = JSON.parse(cleaned);
+
+    // 5. Validasi struktur
+    if (!parsed.questions || !Array.isArray(parsed.questions)) {
+      throw new Error("Missing or invalid 'questions' array");
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error("❌ JSON Parse Error:", error.message);
+    console.log("📄 Raw response length:", text.length);
+    console.log("📄 First 500 chars:", text.substring(0, 500));
+    console.log(
+      "📄 Last 500 chars:",
+      text.substring(Math.max(0, text.length - 500))
+    );
+
+    // Fallback: Coba ekstrak JSON dengan regex lebih agresif
     try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+      // Cari pattern JSON object yang lengkap
+      const jsonPattern = /\{[\s\S]*"questions"[\s\S]*\]/;
+      const match = text.match(jsonPattern);
+
+      if (match) {
+        // Cari penutup object terdekat
+        let jsonStr = match[0];
+        let depth = 0;
+        let endIndex = -1;
+
+        for (let i = 0; i < jsonStr.length; i++) {
+          if (jsonStr[i] === "{") depth++;
+          if (jsonStr[i] === "}") {
+            depth--;
+            if (depth === 0) {
+              endIndex = i;
+              break;
+            }
+          }
+        }
+
+        if (endIndex !== -1) {
+          jsonStr = jsonStr.substring(0, endIndex + 1);
+          const parsed = JSON.parse(jsonStr);
+
+          if (parsed.questions && Array.isArray(parsed.questions)) {
+            console.log("✅ Recovered JSON with fallback parser");
+            return parsed;
+          }
+        }
       }
-    } catch (e) {
-      console.error("Fallback parse also failed:", e.message);
+    } catch (fallbackError) {
+      console.error("❌ Fallback parse failed:", fallbackError.message);
     }
 
     throw new Error("Format respons AI tidak valid. Silakan coba lagi.");
@@ -209,10 +258,10 @@ app.post("/api/generate-questions", async (req, res) => {
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substr(2, 9);
     const uniqueId = `${randomSeed}-${timestamp}-${randomStr}`;
-    
+
     // Determine age group
     let ageGroup, ageContext, languageLevel, exampleQuestions;
-    
+
     if (!userAge || userAge <= 15) {
       ageGroup = "SMP";
       ageContext = "User adalah siswa SMP (12-15 tahun)";
@@ -220,7 +269,7 @@ app.post("/api/generate-questions", async (req, res) => {
 - Pakai kata sehari-hari: suka, senang, main, belajar, kerja
 - HINDARI: produktif, efisien, optimal, preferensi
 - Pertanyaan MAX 15 kata, opsi MAX 10 kata`;
-      
+
       exampleQuestions = `
 CONTOH BAGUS (SMP):
 "Kalau weekend, kamu lebih suka ngapain?"
@@ -228,7 +277,6 @@ A. Main bareng temen di luar
 B. Santai di rumah sendiri  
 C. Belajar hal baru
 D. Olahraga atau aktivitas fisik`;
-      
     } else if (userAge <= 18) {
       ageGroup = "SMA";
       ageContext = "User adalah siswa SMA (16-18 tahun)";
@@ -236,7 +284,7 @@ D. Olahraga atau aktivitas fisik`;
 - Boleh pakai istilah umum tapi tetap jelas
 - Lebih formal dari SMP tapi tetap casual
 - Pertanyaan MAX 20 kata, opsi MAX 12 kata`;
-      
+
       exampleQuestions = `
 CONTOH BAGUS (SMA):
 "Environment kerja yang bikin kamu paling produktif:"
@@ -244,7 +292,6 @@ A. Office dengan struktur jelas
 B. Outdoor atau field work
 C. Remote/WFH yang fleksibel
 D. Co-working space yang vibrant`;
-      
     } else {
       ageGroup = "MAHASISWA";
       ageContext = "User adalah mahasiswa/profesional (19+ tahun)";
@@ -252,7 +299,7 @@ D. Co-working space yang vibrant`;
 - Boleh pakai terminologi karir
 - Semi-formal tapi approachable
 - Pertanyaan bisa lebih kompleks`;
-      
+
       exampleQuestions = `
 CONTOH BAGUS (MAHASISWA):
 "Collaboration style yang cocok dengan kamu:"
@@ -261,7 +308,7 @@ B. Independent dengan weekly sync
 C. Cross-functional team projects
 D. Solo contributor dengan clear goals`;
     }
-    
+
     const systemInstruction = `Kamu adalah H-Mate AI (dibuat oleh Hammad), expert career advisor.
 
 🎯 MISSION: Generate ${questionCount} pertanyaan tes minat bakat yang FRESH, UNIK, dan VALID untuk career matching
@@ -377,6 +424,7 @@ SPECIALIZED: Librarian, Translator, Actuary, Statistician
 
 4. FORMAT:
    ✅ Output PURE JSON (tidak ada markdown)
+   ✅ TIDAK BOLEH ada text diluar JSON
    ✅ Tidak ada backticks atau \`\`\`json
    ✅ Valid JSON structure
 
@@ -417,6 +465,15 @@ Requirements:
 Generate NOW!`;
 
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
+
+    // Tambahkan setelah generateAIContent
+    console.log("📊 AI Response Stats:");
+    console.log("   Length:", aiResponse.length);
+    console.log("   Has opening brace:", aiResponse.includes("{"));
+    console.log("   Has closing brace:", aiResponse.includes("}"));
+    console.log("   Has markdown:", aiResponse.includes("```"));
+    console.log("   First 100 chars:", aiResponse.substring(0, 100));
+
     const parsedResponse = safeJSONParse(aiResponse);
 
     if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
@@ -424,13 +481,17 @@ Generate NOW!`;
     }
 
     // Validate questions
-    const validQuestions = parsedResponse.questions.filter(q => {
+    const validQuestions = parsedResponse.questions.filter((q) => {
       if (!q.options || q.options.length !== 4) return false;
-      return q.options.every(opt => opt.text && opt.text.trim().length > 0 && opt.value);
+      return q.options.every(
+        (opt) => opt.text && opt.text.trim().length > 0 && opt.value
+      );
     });
 
-    console.log(`✅ Generated ${validQuestions.length}/${questionCount} valid questions`);
-    console.log(`   Age: ${userAge || 'default'} | Seed: ${randomSeed}`);
+    console.log(
+      `✅ Generated ${validQuestions.length}/${questionCount} valid questions`
+    );
+    console.log(`   Age: ${userAge || "default"} | Seed: ${randomSeed}`);
 
     if (validQuestions.length < questionCount) {
       console.log(`⚠️ Only ${validQuestions.length} valid questions generated`);
@@ -439,17 +500,16 @@ Generate NOW!`;
     res.status(200).json({
       success: true,
       message: "Questions generated successfully",
-      data: { 
+      data: {
         questions: validQuestions,
         metadata: {
           seed: randomSeed,
           uniqueId: uniqueId,
           ageGroup: ageGroup,
-          timestamp: timestamp
-        }
+          timestamp: timestamp,
+        },
       },
     });
-    
   } catch (error) {
     console.error("❌ Generate questions error:", error);
     res.status(500).json({
@@ -459,6 +519,8 @@ Generate NOW!`;
     });
   }
 });
+
+
 
 // ============================================
 // ENDPOINT 2: ANALYZE RESULTS
