@@ -39,28 +39,53 @@ app.use(express.json());
 
 // === HELPER FUNCTION ===
 async function generateAIContent(prompt, systemInstruction, isJSON = false) {
-  try {
-    const config = {
-      systemInstruction: systemInstruction,
-      temperature: 0.7,
-      maxOutputTokens: 8192, // Increase significantly to prevent truncation
-    };
+  const maxRetries = 3;
+  const baseDelay = 3000; // 3 detik
 
-    // Only set responseMimeType for JSON responses
-    if (isJSON) {
-      config.responseMimeType = "application/json";
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 Attempt ${attempt}/${maxRetries}...`);
+
+      const config = {
+        systemInstruction: systemInstruction,
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+      };
+
+      if (isJSON) {
+        config.responseMimeType = "application/json";
+      }
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ text: prompt }],
+        config: config,
+      });
+
+      console.log(`✅ Success on attempt ${attempt}`);
+      return response.text;
+    } catch (error) {
+      console.error(`❌ Attempt ${attempt} failed:`, error.message);
+
+      const isRetryableError = error.status === 503 || error.status === 429;
+      const hasRetriesLeft = attempt < maxRetries;
+
+      if (isRetryableError && hasRetriesLeft) {
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        console.log(`⏳ Waiting ${delay / 1000}s before retry...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // Final throw
+      if (error.status === 503) {
+        throw new Error("AI sedang sibuk, coba lagi dalam 1 menit");
+      } else if (error.status === 429) {
+        throw new Error("Terlalu banyak permintaan, tunggu sebentar");
+      } else {
+        throw new Error("Gagal berkomunikasi dengan AI");
+      }
     }
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash", // Sesuaikan dengan API key Anda
-      contents: [{ text: prompt }],
-      config: config,
-    });
-
-    return response.text;
-  } catch (error) {
-    console.error("Gemini API Error:", error);
-    throw new Error("Gagal berkomunikasi dengan AI");
   }
 }
 
