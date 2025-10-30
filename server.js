@@ -299,54 +299,54 @@ app.post("/api/generate-questions", async (req, res) => {
       ageGroup = "SMP";
       ageContext = "User adalah siswa SMP (12-15 tahun)";
       languageLevel = `BAHASA: SANGAT SEDERHANA
-- Pakai kata sehari-hari: suka, senang, main, belajar, kerja
-- HINDARI: produktif, efisien, optimal, preferensi
-- Pertanyaan MAX 15 kata, opsi MAX 10 kata`;
-      
-      exampleQuestions = `
-CONTOH BAGUS (SMP):
-"Kalau weekend, kamu lebih suka ngapain?"
-A. Main bareng temen di luar
-B. Santai di rumah sendiri  
-C. Belajar hal baru
-D. Olahraga atau aktivitas fisik`;
+        - Pakai kata sehari-hari: suka, senang, main, belajar, kerja
+        - HINDARI: produktif, efisien, optimal, preferensi
+        - Pertanyaan MAX 15 kata, opsi MAX 10 kata`;
+              
+              exampleQuestions = `
+        CONTOH BAGUS (SMP):
+        "Kalau weekend, kamu lebih suka ngapain?"
+        A. Main bareng temen di luar
+        B. Santai di rumah sendiri  
+        C. Belajar hal baru
+        D. Olahraga atau aktivitas fisik`;
       
     } else if (userAge <= 18) {
       ageGroup = "SMA";
       ageContext = "User adalah siswa SMA (16-18 tahun)";
       languageLevel = `BAHASA: SANTAI TAPI MATURE
-- Boleh pakai istilah umum tapi tetap jelas
-- Lebih formal dari SMP tapi tetap casual
-- Pertanyaan MAX 20 kata, opsi MAX 12 kata`;
+        - Boleh pakai istilah umum tapi tetap jelas
+        - Lebih formal dari SMP tapi tetap casual
+        - Pertanyaan MAX 20 kata, opsi MAX 12 kata`;
       
       exampleQuestions = `
-CONTOH BAGUS (SMA):
-"Environment kerja yang bikin kamu paling produktif:"
-A. Office dengan struktur jelas
-B. Outdoor atau field work
-C. Remote/WFH yang fleksibel
-D. Co-working space yang vibrant`;
+        CONTOH BAGUS (SMA):
+        "Environment kerja yang bikin kamu paling produktif:"
+        A. Office dengan struktur jelas
+        B. Outdoor atau field work
+        C. Remote/WFH yang fleksibel
+        D. Co-working space yang vibrant`;
       
     } else {
       ageGroup = "MAHASISWA";
       ageContext = "User adalah mahasiswa/profesional (19+ tahun)";
       languageLevel = `BAHASA: PROFESIONAL FRIENDLY
-- Boleh pakai terminologi karir
-- Semi-formal tapi approachable
-- Pertanyaan bisa lebih kompleks`;
+      - Boleh pakai terminologi karir
+      - Semi-formal tapi approachable
+      - Pertanyaan bisa lebih kompleks`;
       
       exampleQuestions = `
-CONTOH BAGUS (MAHASISWA):
-"Collaboration style yang cocok dengan kamu:"
-A. Agile team dengan daily standups
-B. Independent dengan weekly sync
-C. Cross-functional team projects
-D. Solo contributor dengan clear goals`;
+        CONTOH BAGUS (MAHASISWA):
+        "Collaboration style yang cocok dengan kamu:"
+        A. Agile team dengan daily standups
+        B. Independent dengan weekly sync
+        C. Cross-functional team projects
+        D. Solo contributor dengan clear goals`;
     }
     
     const systemInstruction = `Kamu adalah H-Mate AI (dibuat oleh Hammad), expert career advisor.
 
-🎯 MISSION: Generate ${questionCount} pertanyaan tes minat bakat yang FRESH, UNIK, dan VALID untuk career matching
+a🎯 MISSION: Generate ${questionCount} pertanyaan tes minat bakat yang FRESH, UNIK, dan VALID untuk career matching
 
 🔑 UNIQUE SEED: ${uniqueId}
 👤 TARGET: ${ageGroup}
