@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { GoogleGenAI } from "@google/genai";
 import "dotenv/config";
 
@@ -10,11 +11,9 @@ const PORT = process.env.PORT || 3000;
 // Validasi GEMINI_API_KEY
 if (!process.env.GEMINI_API_KEY) {
   console.error("❌ ERROR: GEMINI_API_KEY tidak ditemukan!");
-  console.error("Set environment variable GEMINI_API_KEY di Railway");
+  console.error("Set environment variable GEMINI_API_KEY sebelum menjalankan server");
   process.exit(1); // Stop server kalau API key ga ada
 }
-
-console.log("✅ GEMINI_API_KEY terdeteksi");
 
 // Inisialisasi Gemini AI
 let ai;
@@ -22,7 +21,6 @@ try {
   ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
   });
-  console.log("✅ GoogleGenAI initialized successfully");
 } catch (error) {
   console.error("❌ ERROR initializing GoogleGenAI:", error);
   process.exit(1);
@@ -37,6 +35,20 @@ app.use(
 );
 app.use(express.json());
 
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Terlalu banyak permintaan. Coba lagi sebentar.",
+    data: null,
+  },
+});
+
+app.use("/api", apiLimiter);
+
 // === HELPER FUNCTION ===
 async function generateAIContent(prompt, systemInstruction, isJSON = false) {
   const maxRetries = 3;
@@ -44,8 +56,6 @@ async function generateAIContent(prompt, systemInstruction, isJSON = false) {
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🔄 Attempt ${attempt}/${maxRetries}...`);
-
       const config = {
         systemInstruction: systemInstruction,
         temperature: 0.7,
@@ -62,17 +72,14 @@ async function generateAIContent(prompt, systemInstruction, isJSON = false) {
         config: config,
       });
 
-      console.log(`✅ Success on attempt ${attempt}`);
       return response.text;
     } catch (error) {
-      console.error(`❌ Attempt ${attempt} failed:`, error.message);
 
       const isRetryableError = error.status === 503 || error.status === 429;
       const hasRetriesLeft = attempt < maxRetries;
 
       if (isRetryableError && hasRetriesLeft) {
         const delay = baseDelay * Math.pow(2, attempt - 1);
-        console.log(`⏳ Waiting ${delay / 1000}s before retry...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
@@ -88,116 +95,6 @@ async function generateAIContent(prompt, systemInstruction, isJSON = false) {
     }
   }
 }
-
-// // STRATEGI PARSING YANG LEBIH ROBUST
-// function safeJSONParse(text) {
-//   // Log untuk debugging
-//   console.log("🔍 Parsing AI response...");
-//   console.log("Length:", text.length);
-  
-//   try {
-//     // STEP 1: Bersihkan markdown code blocks
-//     let cleaned = text
-//       .replace(/```json\n?/gi, "")
-//       .replace(/```\n?/g, "")
-//       .trim();
-
-//     // STEP 2: Coba parse langsung
-//     const parsed = JSON.parse(cleaned);
-//     console.log("✅ Direct parse successful");
-//     return parsed;
-    
-//   } catch (error) {
-//     console.warn("⚠️ Direct parse failed, trying fallbacks...");
-    
-//     // FALLBACK 1: Ekstrak JSON dari text
-//     try {
-//       // Cari object JSON terbesar
-//       const jsonMatch = text.match(/\{[\s\S]*\}/);
-//       if (jsonMatch) {
-//         const parsed = JSON.parse(jsonMatch[0]);
-//         console.log("✅ Fallback 1 successful (regex extraction)");
-//         return parsed;
-//       }
-//     } catch (e) {
-//       console.warn("⚠️ Fallback 1 failed");
-//     }
-
-//     // FALLBACK 2: Cari array questions di dalam text
-//     try {
-//       const questionsMatch = text.match(/"questions"\s*:\s*\[[\s\S]*\]/);
-//       if (questionsMatch) {
-//         const questionsStr = questionsMatch[0];
-//         const parsed = JSON.parse(`{${questionsStr}}`);
-//         console.log("✅ Fallback 2 successful (questions extraction)");
-//         return parsed;
-//       }
-//     } catch (e) {
-//       console.warn("⚠️ Fallback 2 failed");
-//     }
-
-//     // FALLBACK 3: Log dan throw error
-//     console.error("❌ All parsing strategies failed");
-//     console.log("Preview (first 500 chars):", text.substring(0, 500));
-//     console.log("Preview (last 200 chars):", text.substring(text.length - 200));
-    
-//     throw new Error("Format respons AI tidak valid. Silakan coba lagi.");
-//   }
-// }
-
-// // VALIDASI YANG LEBIH KETAT
-// function validateQuestions(questions) {
-//   if (!Array.isArray(questions)) {
-//     console.error("❌ Questions is not an array:", typeof questions);
-//     return [];
-//   }
-
-//   const validated = questions.filter((q, index) => {
-//     // Validasi struktur dasar
-//     if (!q.question || typeof q.question !== 'string') {
-//       console.warn(`⚠️ Q${index + 1}: Invalid question text`);
-//       return false;
-//     }
-
-//     if (!q.options || !Array.isArray(q.options)) {
-//       console.warn(`⚠️ Q${index + 1}: Invalid options array`);
-//       return false;
-//     }
-
-//     if (q.options.length !== 4) {
-//       console.warn(`⚠️ Q${index + 1}: Expected 4 options, got ${q.options.length}`);
-//       return false;
-//     }
-
-//     // Validasi setiap opsi
-//     const validOptions = q.options.every(opt => {
-//       const isValid = opt.text && 
-//                      opt.text.trim().length > 0 && 
-//                      opt.value &&
-//                      typeof opt.text === 'string' &&
-//                      typeof opt.value === 'string';
-      
-//       if (!isValid) {
-//         console.warn(`⚠️ Q${index + 1}: Invalid option:`, opt);
-//       }
-      
-//       return isValid;
-//     });
-
-//     if (!validOptions) {
-//       console.warn(`⚠️ Q${index + 1}: Has invalid options`);
-//       return false;
-//     }
-
-//     return true;
-//   });
-
-//   console.log(`✅ Validated ${validated.length}/${questions.length} questions`);
-//   return validated;
-// }
-
-// EXPORT FUNCTIONS
-// module.exports = { safeJSONParse, validateQuestions };
 
 // === ROUTES ===
 
@@ -439,8 +336,6 @@ Format:
 
 Generate NOW!`;
 
-    console.log(`🚀 Generating ${questionCount} questions for ${ageGroup}...`);
-    console.log(`   Seed: ${uniqueId}`);
 
     // Call AI with retry mechanism
     let aiResponse;
@@ -449,7 +344,6 @@ Generate NOW!`;
 
     while (attempt < maxAttempts) {
       attempt++;
-      console.log(`   📡 Attempt ${attempt}/${maxAttempts}...`);
 
       try {
         aiResponse = await generateAIContent(prompt, systemInstruction, true);
@@ -459,7 +353,6 @@ Generate NOW!`;
           throw new Error("Empty AI response");
         }
 
-        console.log(`   ✅ Got AI response (${aiResponse.length} chars)`);
         break;
       } catch (error) {
         console.error(`   ❌ Attempt ${attempt} failed:`, error.message);
@@ -474,7 +367,6 @@ Generate NOW!`;
     }
 
     // Parse response dengan fallback yang robust
-    console.log("🔍 Parsing AI response...");
     const parsedResponse = safeJSONParse(aiResponse);
 
     if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
@@ -483,16 +375,11 @@ Generate NOW!`;
     }
 
     // Validate dan filter questions
-    console.log("✔️ Validating questions...");
     const validQuestions = validateQuestions(parsedResponse.questions);
 
     if (validQuestions.length === 0) {
       throw new Error("No valid questions generated");
     }
-
-    console.log(`✅ Generation successful:`);
-    console.log(`   Valid: ${validQuestions.length}/${questionCount}`);
-    console.log(`   Age: ${userAge || 'default'} (${ageGroup})`);
 
     // Jika kurang dari target, log warning tapi tetap return
     if (validQuestions.length < questionCount) {
@@ -539,8 +426,6 @@ Generate NOW!`;
 // ============================================
 
 function safeJSONParse(text) {
-  console.log("   🔍 Parsing...");
-  
   try {
     // STEP 1: Bersihkan markdown
     let cleaned = text
@@ -549,9 +434,7 @@ function safeJSONParse(text) {
       .trim();
 
     // STEP 2: Parse langsung
-    const parsed = JSON.parse(cleaned);
-    console.log("   ✅ Direct parse successful");
-    return parsed;
+    return JSON.parse(cleaned);
     
   } catch (error) {
     console.warn("   ⚠️ Direct parse failed, trying fallbacks...");
@@ -560,9 +443,7 @@ function safeJSONParse(text) {
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        console.log("   ✅ Fallback 1 successful (JSON extraction)");
-        return parsed;
+        return JSON.parse(jsonMatch[0]);
       }
     } catch (e) {
       console.warn("   ⚠️ Fallback 1 failed");
@@ -572,18 +453,14 @@ function safeJSONParse(text) {
     try {
       const questionsMatch = text.match(/"questions"\s*:\s*\[[\s\S]*\]/);
       if (questionsMatch) {
-        const parsed = JSON.parse(`{${questionsMatch[0]}}`);
-        console.log("   ✅ Fallback 2 successful (questions array extraction)");
-        return parsed;
+        return JSON.parse(`{${questionsMatch[0]}}`);
       }
     } catch (e) {
       console.warn("   ⚠️ Fallback 2 failed");
     }
 
-    // Log error detail
-    console.error("   ❌ All parsing attempts failed");
-    console.log("   Response preview:", text.substring(0, 200) + "...");
-    
+    console.error("All parsing attempts failed");
+
     throw new Error("Invalid AI response format - cannot parse JSON");
   }
 }
@@ -628,7 +505,6 @@ function validateQuestions(questions) {
     return true;
   });
 
-  console.log(`   ✅ Validated ${validated.length}/${questions.length} questions`);
   return validated;
 }
 
@@ -710,10 +586,7 @@ CRITICAL:
 
 Analyze NOW!`;
 
-    console.log("🔬 Analyzing test results...");
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
-    
-    console.log("🔍 Parsing analysis...");
     const parsedResponse = safeJSONParse(aiResponse);
 
     if (!parsedResponse.personality_type || !parsedResponse.recommended_careers || 
@@ -737,10 +610,6 @@ Analyze NOW!`;
     const sectors = parsedResponse.recommended_careers.map(c => getSector(c.title));
     const uniqueSectors = new Set(sectors);
     
-    console.log(`✅ Analysis complete:`);
-    console.log(`   ${parsedResponse.recommended_careers.length} careers`);
-    console.log(`   ${uniqueSectors.size} sectors: ${Array.from(uniqueSectors).join(', ')}`);
-    
     if (uniqueSectors.size < 3) {
       console.warn(`⚠️ Low diversity: only ${uniqueSectors.size} sectors`);
     }
@@ -761,46 +630,9 @@ Analyze NOW!`;
   }
 });
 
-// ============================================
-// NOTES
-// ============================================
-
-/*
-FEATURES:
-✅ Fresh AI generation (unique seed setiap kali)
-✅ Age-appropriate language (SMP/SMA/Mahasiswa)
-✅ 100+ career database
-✅ Diverse recommendations (multi-sector)
-✅ Trait-to-career mapping
-✅ Validation & logging
-
-TESTING:
-POST /api/generate-questions
-{ "questionCount": 20, "userAge": 14 } // SMP
-{ "questionCount": 20, "userAge": 17 } // SMA
-{ "questionCount": 20, "userAge": 21 } // Mahasiswa
-
-POST /api/analyze-results
-{ "answers": [...] }
-
-IMPROVEMENTS vs OLD VERSION:
-1. Unique seed generation (random + timestamp + string)
-2. Comprehensive 100+ career list
-3. Diversity enforcement & validation
-4. Age-appropriate examples
-5. Strict rules for quality
-6. Logging for monitoring
-*/
-
-// ====================================================
-// TAMBAHKAN INI DI server.js SETELAH ENDPOINT ANALYZE-RESULTS
-// ====================================================
-
 // 4. UPDATE: Generate Mini Test
 app.post("/api/roadmap/mini-test", async (req, res) => {
   const { questionCount = 15 } = req.body;
-
-  console.log(`📝 Generate mini test (${questionCount} questions)...`);
 
   try {
     const systemInstruction = `
@@ -853,10 +685,6 @@ app.post("/api/roadmap/mini-test", async (req, res) => {
       throw new Error("Struktur respons tidak sesuai format");
     }
 
-    console.log(
-      `✅ Generated ${parsedResponse.questions.length} mini test questions`
-    );
-
     res.status(200).json({
       success: true,
       message: "Berhasil generate mini test",
@@ -883,8 +711,6 @@ app.post("/api/roadmap/analyze-mini-test", async (req, res) => {
       data: null,
     });
   }
-
-  console.log(`🔍 Analyzing mini test (${answers.length} answers)...`);
 
   try {
     const systemInstruction = `
@@ -948,12 +774,6 @@ PENTING:
       throw new Error("Struktur respons tidak sesuai format");
     }
 
-    console.log(
-      `✅ Recommended: ${parsedResponse.recommendedJobs
-        .map((j) => j.title)
-        .join(", ")}`
-    );
-
     res.status(200).json({
       success: true,
       message: "Analisis mini test berhasil",
@@ -981,7 +801,6 @@ app.post("/api/roadmap/generate", async (req, res) => {
     });
   }
 
-  console.log(`🗺️ Generating roadmap for: ${targetRole} (${currentStatus})...`);
 
   try {
     const systemInstruction = `
@@ -1055,7 +874,6 @@ PENTING: Output HANYA JSON, tanpa teks tambahan.
       throw new Error("Struktur respons tidak sesuai format");
     }
 
-    console.log(`✅ Roadmap generated: ${parsedResponse.phases.length} phases`);
 
     res.status(200).json({
       success: true,
@@ -1083,10 +901,6 @@ app.post("/api/roadmap/next-steps", async (req, res) => {
       data: null,
     });
   }
-
-  console.log(
-    `📍 Getting next steps (completed: ${completedPhases.length} phases)...`
-  );
 
   try {
     const systemInstruction = `
@@ -1143,8 +957,6 @@ PENTING: Output HANYA JSON, tanpa teks tambahan.
     const aiResponse = await generateAIContent(prompt, systemInstruction, true);
     const parsedResponse = safeJSONParse(aiResponse);
 
-    console.log(`✅ Next steps generated`);
-
     res.status(200).json({
       success: true,
       message: "Next steps berhasil digenerate",
@@ -1171,8 +983,6 @@ app.post("/api/roadmap/consultation", async (req, res) => {
       data: null,
     });
   }
-
-  console.log(`💬 Roadmap consultation: "${message.substring(0, 50)}..."`);
 
   try {
     const systemInstruction = `
@@ -1240,11 +1050,4 @@ app.use((req, res) => {
   });
 });
 
-// === START SERVER ===
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server H-Mate berjalan di port ${PORT}`);
-  console.log(`📚 Dokumentasi API:`);
-  console.log(`   POST /api/konsultasi - Chat konsultasi karier`);
-  console.log(`   POST /api/generate-questions - Generate soal tes`);
-  console.log(`   POST /api/analyze-results - Analisis hasil tes`);
-});
+app.listen(PORT, "0.0.0.0");
