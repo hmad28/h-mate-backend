@@ -1,91 +1,130 @@
 # H-Mate Backend
 
-Backend H-Mate adalah service Express untuk fitur AI, konsultasi, generate question, analisis hasil, dan roadmap. Deployment yang didokumentasikan di sini menggunakan Docker dan `docker compose` dari root project.
+Backend API H-Mate yang dibangun dengan Express 5. Service ini menangani konsultasi karier, generate pertanyaan tes minat, analisis hasil, mini test roadmap, roadmap generation, next steps, dan konsultasi lanjutan berbasis Google GenAI.
 
-## Requirements
+## Fitur Utama
 
-- Git
-- Docker
-- Docker Compose
+- Endpoint konsultasi karier AI (`/api/konsultasi`)
+- Generator pertanyaan tes minat bakat
+- Analisis hasil tes dan rekomendasi karier
+- Mini test untuk memulai roadmap karier
+- Generator roadmap, next steps, dan konsultasi roadmap
+- Health check endpoint untuk monitoring
+- Rate limiting untuk seluruh route di bawah `/api`
+
+## Tech Stack
+
+- Node.js + Express 5
+- `@google/genai` untuk integrasi Gemini
+- `cors` untuk origin frontend
+- `express-rate-limit` untuk pembatasan request
+- `dotenv` untuk konfigurasi environment
+- `nodemon` untuk development
+
+## Struktur Project
+
+```text
+.
+├─ server.js        # seluruh route dan logic backend
+├─ package.json     # scripts dan dependencies
+├─ Dockerfile       # image production backend
+└─ .env.example     # template environment variable
+```
+
+## Prasyarat
+
+- Node.js 20+
+- npm
 - `GEMINI_API_KEY` yang valid
+- URL frontend yang benar untuk konfigurasi CORS
 
 ## Environment Variables
 
-Ada tiga file env yang perlu diisi:
-
-- `./.env` untuk variable `docker-compose.yml`
-- `frontend/.env` untuk frontend app
-- `backend/.env` untuk backend app
-
-Salin file example:
+Salin file contoh lalu isi nilainya:
 
 ```bash
 cp .env.example .env
-cp frontend/.env.example frontend/.env
-cp backend/.env.example backend/.env
 ```
 
-Variable penting:
+| Variable | Wajib | Default | Keterangan |
+| --- | --- | --- | --- |
+| `PORT` | Tidak | `3000` | Port server Express |
+| `FRONTEND_URL` | Tidak | `http://localhost:3001` | Origin frontend untuk CORS |
+| `GEMINI_API_KEY` | Ya | - | API key Gemini; backend akan gagal start jika tidak diisi |
 
-### Root `.env`
+## Menjalankan Secara Lokal
 
-- `NEXT_PUBLIC_API_URL`
-- `FRONTEND_HOST_PORT`
-- `BACKEND_HOST_PORT`
-
-### `backend/.env`
-
-- `PORT`
-- `FRONTEND_URL`
-- `GEMINI_API_KEY`
-
-### `frontend/.env`
-
-- `DATABASE_URL`
-- `SESSION_SECRET`
-- `NEXT_PUBLIC_API_URL`
-- `ANTHROPIC_API_KEY`
-
-`NEXT_PUBLIC_API_URL` di root `.env` dan `frontend/.env` harus sama agar build-time dan runtime frontend konsisten.
-
-## Cara Menjalankan dengan Docker Compose
-
-Jalankan semua perintah dari root project.
-
-### 1. Clone repository
+1. Install dependency:
 
 ```bash
-git clone <repo-url>
-cd H-Mate
+npm install
 ```
 
-### 2. Isi file environment
+2. Siapkan file environment:
 
 ```bash
 cp .env.example .env
-cp frontend/.env.example frontend/.env
-cp backend/.env.example backend/.env
 ```
 
-Lalu isi value backend dan frontend sesuai environment VPS.
-
-### 3. Build dan jalankan
+3. Jalankan backend:
 
 ```bash
-docker compose up --build
+npm run dev
 ```
 
-### 4. Stop semua service
+Untuk mode non-watch:
 
 ```bash
-docker compose down
+npm start
 ```
+
+Secara default backend berjalan di `http://localhost:3000`.
+
+## Scripts
+
+| Command | Fungsi |
+| --- | --- |
+| `npm run dev` | Menjalankan backend dengan `nodemon` |
+| `npm start` | Menjalankan backend dengan Node.js |
+| `npm test` | Placeholder default dan saat ini belum dipakai |
+
+## API Endpoints
+
+| Method | Endpoint | Fungsi |
+| --- | --- | --- |
+| `POST` | `/api/konsultasi` | Chat konsultasi karier |
+| `POST` | `/api/generate-questions` | Generate soal tes minat bakat |
+| `POST` | `/api/analyze-results` | Analisis jawaban tes dan rekomendasi karier |
+| `POST` | `/api/roadmap/mini-test` | Generate mini test roadmap |
+| `POST` | `/api/roadmap/analyze-mini-test` | Analisis mini test |
+| `POST` | `/api/roadmap/generate` | Generate roadmap karier |
+| `POST` | `/api/roadmap/next-steps` | Langkah lanjutan berdasarkan roadmap |
+| `POST` | `/api/roadmap/consultation` | Konsultasi lanjutan terkait roadmap |
+| `GET` | `/health` | Health check service |
 
 ## Catatan Operasional
 
-- Backend dipublish ke host port `3000` secara default.
-- Container backend memakai `restart: unless-stopped`.
-- Backend memiliki healthcheck ke endpoint `/health`.
-- `FRONTEND_URL` harus sesuai origin frontend yang diakses browser agar CORS tidak gagal.
-- `docker-compose.yml` hanya menjalankan frontend dan backend; database tetap eksternal.
-- Jangan hardcode domain atau secret ke Docker config; gunakan file `.env`.
+- Semua route di bawah `/api` dibatasi oleh rate limiter `100 request / 15 menit`
+- CORS menerima origin dari `FRONTEND_URL` atau fallback `http://localhost:3001`
+- Server bind ke `0.0.0.0`, sehingga cocok untuk container deployment
+- Jika `GEMINI_API_KEY` tidak tersedia, proses akan berhenti saat startup
+- Respons error dikembalikan dalam format JSON
+
+## Docker
+
+Backend dapat dijalankan langsung dari Dockerfile repo ini.
+
+```bash
+docker build -t h-mate-backend .
+
+docker run --rm \
+  --env-file .env \
+  -p 3000:3000 \
+  h-mate-backend
+```
+
+Jika Anda mengubah `PORT` di `.env`, sesuaikan mapping port host dan container.
+
+## License
+
+ISC
